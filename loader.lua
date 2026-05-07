@@ -131,6 +131,9 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = playerGui
 
+-- Forward declarations so notification click can reference these
+local openMenu, hideMenu, menuOpen
+
 -- ──────────────────────────────────────────────
 -- Notification
 -- ──────────────────────────────────────────────
@@ -152,15 +155,20 @@ NotifStroke.Color = Color3.fromRGB(80, 80, 160)
 NotifStroke.Thickness = 1.5
 NotifStroke.Parent = Notification
 
-local NotifLabel = Instance.new("TextLabel")
+local NotifLabel = Instance.new("TextButton")
 NotifLabel.Size = UDim2.new(1, 0, 1, 0)
 NotifLabel.BackgroundTransparency = 1
-NotifLabel.Text = "🔑  Press LControl to open menu"
+NotifLabel.Text = "🔑  Tap here or LControl to open"
 NotifLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
 NotifLabel.TextSize = 14
 NotifLabel.Font = Enum.Font.GothamMedium
 NotifLabel.ZIndex = 21
+NotifLabel.AutoButtonColor = false
 NotifLabel.Parent = Notification
+
+NotifLabel.MouseButton1Click:Connect(function()
+    openMenu()
+end)
 
 local function showNotification()
     TweenService:Create(Notification, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
@@ -789,14 +797,14 @@ end)
 -- ──────────────────────────────────────────────
 -- Open / Close / Minimize
 -- ──────────────────────────────────────────────
-local menuOpen = false
+menuOpen = false
 
-local function openMenu()
+openMenu = function()
     menuOpen = true
     MenuFrame.Visible = true
 end
 
-local function hideMenu()
+hideMenu = function()
     menuOpen = false
     MenuFrame.Visible = false
     showNotification()
