@@ -544,6 +544,54 @@ homeCount.LayoutOrder = 3
 homeCount.Parent = homePage
 Instance.new("UICorner", homeCount).CornerRadius = UDim.new(0, 8)
 
+-- Rejoin Server button
+local rejoinBtn = Instance.new("TextButton")
+rejoinBtn.Size = UDim2.new(1, 0, 0, 40)
+rejoinBtn.BackgroundColor3 = Color3.fromRGB(40, 80, 180)
+rejoinBtn.BorderSizePixel = 0
+rejoinBtn.Text = "🔄  Rejoin Server"
+rejoinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+rejoinBtn.TextSize = 14
+rejoinBtn.Font = Enum.Font.GothamBold
+rejoinBtn.ZIndex = 13
+rejoinBtn.LayoutOrder = 4
+rejoinBtn.Parent = homePage
+Instance.new("UICorner", rejoinBtn).CornerRadius = UDim.new(0, 8)
+
+local rejoinStroke = Instance.new("UIStroke")
+rejoinStroke.Color = Color3.fromRGB(60, 110, 220)
+rejoinStroke.Thickness = 1.5
+rejoinStroke.Parent = rejoinBtn
+
+rejoinBtn.MouseEnter:Connect(function()
+    TweenService:Create(rejoinBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(60, 110, 230)
+    }):Play()
+end)
+rejoinBtn.MouseLeave:Connect(function()
+    TweenService:Create(rejoinBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(40, 80, 180)
+    }):Play()
+end)
+
+rejoinBtn.MouseButton1Click:Connect(function()
+    rejoinBtn.Text = "🔄  Rejoining..."
+    rejoinBtn.BackgroundColor3 = Color3.fromRGB(30, 60, 140)
+    task.spawn(function()
+        local TeleportService = game:GetService("TeleportService")
+        local placeId = game.PlaceId
+        local ok, err = pcall(function()
+            TeleportService:Teleport(placeId, Players.LocalPlayer)
+        end)
+        if not ok then
+            task.wait(1)
+            rejoinBtn.Text = "🔄  Rejoin Server"
+            rejoinBtn.BackgroundColor3 = Color3.fromRGB(40, 80, 180)
+            warn("[Loader] Rejoin failed: " .. tostring(err))
+        end
+    end)
+end)
+
 -- ──────────────────────────────────────────────
 -- Script Page — one card per script
 -- ──────────────────────────────────────────────
@@ -562,6 +610,71 @@ scriptHeader.LayoutOrder = 0
 scriptHeader.Parent = scriptPage
 Instance.new("UICorner", scriptHeader).CornerRadius = UDim.new(0, 8)
 
+-- Search bar
+local searchFrame = Instance.new("Frame")
+searchFrame.Size = UDim2.new(1, 0, 0, 32)
+searchFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 40)
+searchFrame.BorderSizePixel = 0
+searchFrame.ZIndex = 13
+searchFrame.LayoutOrder = 1
+searchFrame.Parent = scriptPage
+Instance.new("UICorner", searchFrame).CornerRadius = UDim.new(0, 7)
+
+local searchStroke = Instance.new("UIStroke")
+searchStroke.Color = Color3.fromRGB(60, 60, 110)
+searchStroke.Thickness = 1.2
+searchStroke.Parent = searchFrame
+
+local searchIcon = Instance.new("TextLabel")
+searchIcon.Size = UDim2.new(0, 28, 1, 0)
+searchIcon.BackgroundTransparency = 1
+searchIcon.Text = "🔍"
+searchIcon.TextSize = 14
+searchIcon.Font = Enum.Font.Gotham
+searchIcon.ZIndex = 14
+searchIcon.Parent = searchFrame
+
+local searchBox = Instance.new("TextBox")
+searchBox.Size = UDim2.new(1, -36, 1, 0)
+searchBox.Position = UDim2.new(0, 28, 0, 0)
+searchBox.BackgroundTransparency = 1
+searchBox.PlaceholderText = "Search scripts..."
+searchBox.PlaceholderColor3 = Color3.fromRGB(90, 90, 130)
+searchBox.Text = ""
+searchBox.TextColor3 = Color3.fromRGB(210, 210, 255)
+searchBox.TextSize = 13
+searchBox.Font = Enum.Font.GothamMedium
+searchBox.TextXAlignment = Enum.TextXAlignment.Left
+searchBox.ClearTextOnFocus = false
+searchBox.ZIndex = 14
+searchBox.Parent = searchFrame
+
+-- Focus highlight
+searchBox.Focused:Connect(function()
+    TweenService:Create(searchStroke, TweenInfo.new(0.15), {
+        Color = Color3.fromRGB(100, 100, 200)
+    }):Play()
+end)
+searchBox.FocusLost:Connect(function()
+    TweenService:Create(searchStroke, TweenInfo.new(0.15), {
+        Color = Color3.fromRGB(60, 60, 110)
+    }):Play()
+end)
+
+local scriptCards = {}
+
+local function filterScripts(query)
+    local q = query:lower():gsub("^%s+", ""):gsub("%s+$", "")
+    for _, cardData in ipairs(scriptCards) do
+        local matches = (q == "") or (cardData.name:lower():find(q, 1, true) ~= nil)
+        cardData.card.Visible = matches
+    end
+end
+
+searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    filterScripts(searchBox.Text)
+end)
+
 for i, scriptData in ipairs(SCRIPTS) do
     -- Card frame
     local card = Instance.new("Frame")
@@ -573,6 +686,7 @@ for i, scriptData in ipairs(SCRIPTS) do
     card.LayoutOrder = i
     card.Parent = scriptPage
     Instance.new("UICorner", card).CornerRadius = UDim.new(0, 7)
+    table.insert(scriptCards, { name = scriptData.display, card = card })
 
     local cardStroke = Instance.new("UIStroke")
     cardStroke.Color = Color3.fromRGB(50, 50, 90)
