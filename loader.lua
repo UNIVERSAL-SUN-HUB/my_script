@@ -534,6 +534,17 @@ homeWelcome.LayoutOrder = 1
 homeWelcome.Parent = homePage
 Instance.new("UICorner", homeWelcome).CornerRadius = UDim.new(0, 8)
 
+local homeCredit = Instance.new("TextLabel")
+homeCredit.Size = UDim2.new(1, 0, 0, 28)
+homeCredit.BackgroundTransparency = 1
+homeCredit.Text = "Created by Naitik  ·  Developer: Naitik"
+homeCredit.TextColor3 = Color3.fromRGB(120, 120, 180)
+homeCredit.TextSize = 12
+homeCredit.Font = Enum.Font.GothamMedium
+homeCredit.ZIndex = 13
+homeCredit.LayoutOrder = 1
+homeCredit.Parent = homePage
+
 local homeDesc = Instance.new("TextLabel")
 homeDesc.Size = UDim2.new(1, 0, 0, 60)
 homeDesc.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
