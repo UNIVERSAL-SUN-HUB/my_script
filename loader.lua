@@ -166,7 +166,7 @@ NotifLabel.ZIndex = 21
 NotifLabel.AutoButtonColor = false
 NotifLabel.Parent = Notification
 
-NotifLabel.MouseButton1Click:Connect(function()
+NotifLabel.Activated:Connect(function()
     openMenu()
 end)
 
