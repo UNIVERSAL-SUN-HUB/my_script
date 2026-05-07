@@ -131,6 +131,15 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = playerGui
 
+-- ──────────────────────────────────────────────
+-- Mobile Detection & UI Scaling
+-- ──────────────────────────────────────────────
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+local GuiScale = Instance.new("UIScale")
+GuiScale.Scale = isMobile and 0.62 or 1.0
+GuiScale.Parent = ScreenGui
+
 -- Forward declarations so notification click can reference these
 local openMenu, hideMenu, menuOpen
 
