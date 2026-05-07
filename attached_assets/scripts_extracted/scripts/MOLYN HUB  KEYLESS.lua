@@ -1,0 +1,1 @@
+loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-MOLYN-DEVELOPMENT-201480"))()

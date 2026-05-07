@@ -1,0 +1,5 @@
+--[[
+	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+script_key="KEY_HERE";
+loadstring(game:HttpGet("https://officialaxscripts.vercel.app/scripts/AX-Loader.lua"))()

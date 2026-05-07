@@ -9,6 +9,120 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- ──────────────────────────────────────────────
+-- Embedded Scripts
+-- ──────────────────────────────────────────────
+local SCRIPTS = {
+    [1] = {
+        display = "99 forset",
+        code = "-- Script taken from https://xenoscripts.com website --\n\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/VapeVoidware/VW-Add/main/loader.lua\", true))()",
+    },
+    [2] = {
+        display = "AAA-BLUE X HUM BLOX FRUIT SCRIPT",
+        code = "_G.AutoTranslate = true\n_G.SaveConfig = true\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/Main.lua\"))()",
+    },
+    [3] = {
+        display = "AUTO EASTER EGG XENO DELTA 100+ STACKING AUTO V4",
+        code = "loadstring(game:HttpGet(\"https://rawscripts.net/raw/GRAVITY-Blox-Fruits-BEST-SCRIPT-SOLARA-AND-XENO-AUTO-V4-AUTO-LEVEL-AUTO-RAID-37566\"))()",
+    },
+    [4] = {
+        display = "Admin panel Universal KEYLESS",
+        code = "loadstring(game:HttpGet(\"https://rawscripts.net/raw/Universal-Script-Admin-Panel-Universal-KEYLESS-171955\"))()",
+    },
+    [5] = {
+        display = "Auto Win Money Farm Kill All Aimbot",
+        code = "loadstring(game:HttpGet(\"https://rawscripts.net/raw/Bite-By-Night-Auto-win-Money-Farm-Kill-All-Aimbot-and-70-features-202018\"))()",
+    },
+    [6] = {
+        display = "MOLYN HUB KEYLESS",
+        code = "loadstring(game:HttpGet(\"https://rawscripts.net/raw/Universal-Script-MOLYN-DEVELOPMENT-201480\"))()",
+    },
+    [7] = {
+        display = "Real Cryptic Free",
+        code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/OnlyCryptic/Cryptic/hm/main.lua\"))()",
+    },
+    [8] = {
+        display = "ZeScript Godmode speed bypass",
+        code = "loadstring(game:HttpGet(\"https://rawscripts.net/raw/DOORS-ZeScript-67246\"))()",
+    },
+    [9] = {
+        display = "a gravity v2",
+        code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/Dev-GravityHub/BloxFruit/refs/heads/main/Main.lua\"))()",
+    },
+    [10] = {
+        display = "bite by night",
+        code = "loadstring(game:HttpGet(\"https://rawscripts.net/raw/Bite-By-Night-Auto-win-Money-Farm-Kill-All-Aimbot-and-70-features-202018\"))()",
+    },
+    [11] = {
+        display = "blox fruits master hop",
+        code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/WhiteX1208/Scripts/refs/heads/main/HopScript.luau\"))()",
+    },
+    [12] = {
+        display = "blue x hub",
+        code = "repeat wait() until game:IsLoaded() and game.Players.LocalPlayer\ngetgenv().Team = \"Marines\"\n_G.AutoTranslate = true\n_G.SaveConfig = true\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/Main.lua\"))()",
+    },
+    [13] = {
+        display = "bluexhum",
+        code = "repeat wait() until game:IsLoaded() and game.Players.LocalPlayer\ngetgenv().Team = \"Marines\"\n_G.AutoTranslate = true\n_G.SaveConfig = true\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/Main.lua\"))()",
+    },
+    [14] = {
+        display = "break in 2",
+        code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/RScriptz/RobloxScripts/main/BreakIn2.lua\"))()",
+    },
+    [15] = {
+        display = "crashed gravity",
+        code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/Dev-GravityHub/BloxFruit/refs/heads/main/Main.lua\"))()",
+    },
+    [16] = {
+        display = "forsaken",
+        code = "loadstring(game:HttpGet(\"https://pastebin.com/raw/zH9Extzk\"))()",
+    },
+    [17] = {
+        display = "fruit find",
+        code = "getgenv().Team = \"Marines\"\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/Dev-GravityHub/BloxFruit/refs/heads/main/FindFruit.lua\"))()",
+    },
+    [18] = {
+        display = "hop bounty hunt",
+        code = "getgenv().Config = {\n    Team = \"Pirates\",\n    HideUI = true,\n    HuntConfig = {\n        [\"Earned Notification Enabled\"] = false,\n        [\"Reset Farm (New)\"] = true,\n        [\"Chat\"] = false,\n        [\"Farm Delay\"] = 0.22,\n        [\"Webhook\"] = { Enabled = false, Url = \"\" }\n    }\n}\nloadstring(game:HttpGet(\"https://api.luarmor.net/files/v4/loaders/2ffcdb62773f587bfb9eb0d52bb35b0c.lua\"))()",
+    },
+    [19] = {
+        display = "hop master blox fruit",
+        code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/WhiteX1208/Scripts/refs/heads/main/HopScript.luau\"))()",
+    },
+    [20] = {
+        display = "inf jump",
+        code = "local InfiniteJumpEnabled = true\ngame:GetService(\"UserInputService\").JumpRequest:connect(function()\n\tif InfiniteJumpEnabled then\n\t\tgame:GetService(\"Players\").LocalPlayer.Character:FindFirstChildOfClass(\"Humanoid\"):ChangeState(\"Jumping\")\n\tend\nend)",
+    },
+    [21] = {
+        display = "ink",
+        code = "script_key=\"KEY_HERE\";\nloadstring(game:HttpGet(\"https://officialaxscripts.vercel.app/scripts/AX-Loader.lua\"))()",
+    },
+    [22] = {
+        display = "ink game",
+        code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/eikikrkr-ux/bypasok/refs/heads/main/ok\"))()",
+    },
+    [23] = {
+        display = "main (Ronix)",
+        code = "--[[ Welcome to Ronix! ]]",
+    },
+    [24] = {
+        display = "nullfire doors",
+        code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/TeamNullFire/NullFire/main/loader.lua\"))()",
+    },
+    [25] = {
+        display = "orange",
+        code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/HieuDepTrai-Z/Dev_Orange/refs/heads/main/OrangeHub.lua\"))()",
+    },
+    [26] = {
+        display = "untitled-6",
+        code = "script_key = \"false\"\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/WhiteX1208/Scripts/refs/heads/main/BF-Beta.lua\"))()",
+    },
+    [27] = {
+        display = "untitled-7 (AutoBounty)",
+        code = "getgenv().config = {\n    [\"Team\"] = \"Pirates\",\n    [\"Use Race\"] = { [\"V3\"] = true, [\"V4\"] = true },\n    [\"Info Screen\"] = true,\n    [\"White Screen\"] = false,\n    [\"BypassTp\"] = true,\n    [\"SkipFruit\"] = { \"Portal-Portal\" },\n    [\"Skip Race V4 User\"] = true,\n    [\"MinBountyHunt\"] = 0,\n    [\"MaxBountyHunt\"] = 30000000,\n    [\"SafeHealth\"] = 4000\n}\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/LumosSera/SeraHub/main/AutoBounty.lua\"))()",
+    },
+}
+
+-- ──────────────────────────────────────────────
 -- ScreenGui Setup
 -- ──────────────────────────────────────────────
 local ScreenGui = Instance.new("ScreenGui")
@@ -22,8 +136,8 @@ ScreenGui.Parent = playerGui
 -- ──────────────────────────────────────────────
 local Notification = Instance.new("Frame")
 Notification.Name = "Notification"
-Notification.Size = UDim2.new(0, 260, 0, 40)
-Notification.Position = UDim2.new(0.5, -130, 0, -50)
+Notification.Size = UDim2.new(0, 280, 0, 40)
+Notification.Position = UDim2.new(0.5, -140, 0, -50)
 Notification.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 Notification.BorderSizePixel = 0
 Notification.ZIndex = 20
@@ -48,20 +162,61 @@ NotifLabel.Font = Enum.Font.GothamMedium
 NotifLabel.ZIndex = 21
 NotifLabel.Parent = Notification
 
--- Slide notification in, wait 2s, slide out
 local function showNotification()
-	TweenService:Create(Notification, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Position = UDim2.new(0.5, -130, 0, 16)
-	}):Play()
-
-	task.delay(2, function()
-		TweenService:Create(Notification, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Position = UDim2.new(0.5, -130, 0, -50)
-		}):Play()
-	end)
+    TweenService:Create(Notification, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0.5, -140, 0, 16)
+    }):Play()
+    task.delay(2, function()
+        TweenService:Create(Notification, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Position = UDim2.new(0.5, -140, 0, -50)
+        }):Play()
+    end)
 end
 
 showNotification()
+
+-- ──────────────────────────────────────────────
+-- Execute Notification (feedback toast)
+-- ──────────────────────────────────────────────
+local ExecToast = Instance.new("Frame")
+ExecToast.Name = "ExecToast"
+ExecToast.Size = UDim2.new(0, 280, 0, 40)
+ExecToast.Position = UDim2.new(0.5, -140, 1, 10)
+ExecToast.BackgroundColor3 = Color3.fromRGB(20, 40, 20)
+ExecToast.BorderSizePixel = 0
+ExecToast.ZIndex = 20
+ExecToast.Parent = ScreenGui
+
+local ExecToastCorner = Instance.new("UICorner")
+ExecToastCorner.CornerRadius = UDim.new(0, 8)
+ExecToastCorner.Parent = ExecToast
+
+local ExecToastStroke = Instance.new("UIStroke")
+ExecToastStroke.Color = Color3.fromRGB(60, 160, 80)
+ExecToastStroke.Thickness = 1.5
+ExecToastStroke.Parent = ExecToast
+
+local ExecToastLabel = Instance.new("TextLabel")
+ExecToastLabel.Size = UDim2.new(1, 0, 1, 0)
+ExecToastLabel.BackgroundTransparency = 1
+ExecToastLabel.Text = "✅  Executed!"
+ExecToastLabel.TextColor3 = Color3.fromRGB(160, 255, 160)
+ExecToastLabel.TextSize = 14
+ExecToastLabel.Font = Enum.Font.GothamMedium
+ExecToastLabel.ZIndex = 21
+ExecToastLabel.Parent = ExecToast
+
+local function showExecToast(name)
+    ExecToastLabel.Text = "✅  Executed: " .. name
+    TweenService:Create(ExecToast, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0.5, -140, 1, -56)
+    }):Play()
+    task.delay(2, function()
+        TweenService:Create(ExecToast, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Position = UDim2.new(0.5, -140, 1, 10)
+        }):Play()
+    end)
+end
 
 -- ──────────────────────────────────────────────
 -- Confirm Dialog
@@ -107,7 +262,6 @@ DialogSub.Font = Enum.Font.Gotham
 DialogSub.ZIndex = 31
 DialogSub.Parent = ConfirmDialog
 
--- Yes button
 local DialogYes = Instance.new("TextButton")
 DialogYes.Size = UDim2.new(0, 100, 0, 30)
 DialogYes.Position = UDim2.new(0, 20, 1, -42)
@@ -124,7 +278,6 @@ local DialogYesCorner = Instance.new("UICorner")
 DialogYesCorner.CornerRadius = UDim.new(0, 6)
 DialogYesCorner.Parent = DialogYes
 
--- No button
 local DialogNo = Instance.new("TextButton")
 DialogNo.Size = UDim2.new(0, 100, 0, 30)
 DialogNo.Position = UDim2.new(1, -120, 1, -42)
@@ -146,8 +299,8 @@ DialogNoCorner.Parent = DialogNo
 -- ──────────────────────────────────────────────
 local MenuFrame = Instance.new("Frame")
 MenuFrame.Name = "MenuFrame"
-MenuFrame.Size = UDim2.new(0, 460, 0, 320)
-MenuFrame.Position = UDim2.new(0.5, -230, 0.5, -160)
+MenuFrame.Size = UDim2.new(0, 500, 0, 340)
+MenuFrame.Position = UDim2.new(0.5, -250, 0.5, -170)
 MenuFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 22)
 MenuFrame.BorderSizePixel = 0
 MenuFrame.Visible = false
@@ -176,7 +329,6 @@ local TitleBarCorner = Instance.new("UICorner")
 TitleBarCorner.CornerRadius = UDim.new(0, 12)
 TitleBarCorner.Parent = TitleBar
 
--- Fill bottom corners of title bar so it blends
 local TitleBarFill = Instance.new("Frame")
 TitleBarFill.Size = UDim2.new(1, 0, 0, 12)
 TitleBarFill.Position = UDim2.new(0, 0, 1, -12)
@@ -197,7 +349,6 @@ TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.ZIndex = 12
 TitleLabel.Parent = TitleBar
 
--- Minimize button
 local MinimizeBtn = Instance.new("TextButton")
 MinimizeBtn.Size = UDim2.new(0, 28, 0, 22)
 MinimizeBtn.Position = UDim2.new(1, -62, 0.5, -11)
@@ -214,7 +365,6 @@ local MinCorner = Instance.new("UICorner")
 MinCorner.CornerRadius = UDim.new(0, 5)
 MinCorner.Parent = MinimizeBtn
 
--- Close button
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0, 28, 0, 22)
 CloseBtn.Position = UDim2.new(1, -30, 0.5, -11)
@@ -231,7 +381,7 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 5)
 CloseCorner.Parent = CloseBtn
 
--- ── Sidebar (Tab Navigation) ──
+-- ── Sidebar ──
 local Sidebar = Instance.new("Frame")
 Sidebar.Name = "Sidebar"
 Sidebar.Size = UDim2.new(0, 110, 1, -36)
@@ -266,94 +416,91 @@ ContentArea.Parent = MenuFrame
 -- Tab System
 -- ──────────────────────────────────────────────
 local tabs = {}
-local activeTab = nil
 
 local function createTabButton(name, icon, order)
-	local btn = Instance.new("TextButton")
-	btn.Name = name .. "Tab"
-	btn.Size = UDim2.new(1, 0, 0, 34)
-	btn.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
-	btn.BorderSizePixel = 0
-	btn.Text = icon .. "  " .. name
-	btn.TextColor3 = Color3.fromRGB(160, 160, 200)
-	btn.TextSize = 13
-	btn.Font = Enum.Font.GothamMedium
-	btn.TextXAlignment = Enum.TextXAlignment.Left
-	btn.LayoutOrder = order
-	btn.ZIndex = 12
-	btn.Parent = Sidebar
+    local btn = Instance.new("TextButton")
+    btn.Name = name .. "Tab"
+    btn.Size = UDim2.new(1, 0, 0, 34)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    btn.BorderSizePixel = 0
+    btn.Text = icon .. "  " .. name
+    btn.TextColor3 = Color3.fromRGB(160, 160, 200)
+    btn.TextSize = 13
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.LayoutOrder = order
+    btn.ZIndex = 12
+    btn.Parent = Sidebar
 
-	local btnPad = Instance.new("UIPadding")
-	btnPad.PaddingLeft = UDim.new(0, 8)
-	btnPad.Parent = btn
+    local btnPad = Instance.new("UIPadding")
+    btnPad.PaddingLeft = UDim.new(0, 8)
+    btnPad.Parent = btn
 
-	local btnCorner = Instance.new("UICorner")
-	btnCorner.CornerRadius = UDim.new(0, 6)
-	btnCorner.Parent = btn
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = btn
 
-	return btn
+    return btn
 end
 
 local function createTabPage(name)
-	local page = Instance.new("ScrollingFrame")
-	page.Name = name .. "Page"
-	page.Size = UDim2.new(1, 0, 1, 0)
-	page.BackgroundTransparency = 1
-	page.BorderSizePixel = 0
-	page.ScrollBarThickness = 4
-	page.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 160)
-	page.Visible = false
-	page.ZIndex = 12
-	page.CanvasSize = UDim2.new(0, 0, 0, 0)
-	page.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	page.Parent = ContentArea
+    local page = Instance.new("ScrollingFrame")
+    page.Name = name .. "Page"
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 4
+    page.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 160)
+    page.Visible = false
+    page.ZIndex = 12
+    page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    page.Parent = ContentArea
 
-	local pagePad = Instance.new("UIPadding")
-	pagePad.PaddingTop = UDim.new(0, 10)
-	pagePad.PaddingLeft = UDim.new(0, 10)
-	pagePad.PaddingRight = UDim.new(0, 10)
-	pagePad.Parent = page
+    local pagePad = Instance.new("UIPadding")
+    pagePad.PaddingTop = UDim.new(0, 8)
+    pagePad.PaddingLeft = UDim.new(0, 8)
+    pagePad.PaddingRight = UDim.new(0, 8)
+    pagePad.PaddingBottom = UDim.new(0, 8)
+    pagePad.Parent = page
 
-	local pageLayout = Instance.new("UIListLayout")
-	pageLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	pageLayout.Padding = UDim.new(0, 8)
-	pageLayout.Parent = page
+    local pageLayout = Instance.new("UIListLayout")
+    pageLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    pageLayout.Padding = UDim.new(0, 6)
+    pageLayout.Parent = page
 
-	return page
+    return page
 end
 
 local function setActiveTab(name)
-	for tabName, tabData in pairs(tabs) do
-		local isActive = (tabName == name)
-		tabData.button.BackgroundColor3 = isActive
-			and Color3.fromRGB(60, 60, 120)
-			or Color3.fromRGB(30, 30, 50)
-		tabData.button.TextColor3 = isActive
-			and Color3.fromRGB(230, 230, 255)
-			or Color3.fromRGB(160, 160, 200)
-		tabData.page.Visible = isActive
-	end
-	activeTab = name
+    for tabName, tabData in pairs(tabs) do
+        local isActive = (tabName == name)
+        tabData.button.BackgroundColor3 = isActive
+            and Color3.fromRGB(60, 60, 120)
+            or Color3.fromRGB(30, 30, 50)
+        tabData.button.TextColor3 = isActive
+            and Color3.fromRGB(230, 230, 255)
+            or Color3.fromRGB(160, 160, 200)
+        tabData.page.Visible = isActive
+    end
 end
 
--- ── Register Tabs ──
 local tabDefs = {
-	{ name = "Home",   icon = "🏠", order = 1 },
-	{ name = "Script", icon = "📜", order = 2 },
+    { name = "Home",   icon = "🏠", order = 1 },
+    { name = "Script", icon = "📜", order = 2 },
 }
 
 for _, def in ipairs(tabDefs) do
-	local btn  = createTabButton(def.name, def.icon, def.order)
-	local page = createTabPage(def.name)
-	tabs[def.name] = { button = btn, page = page }
-
-	btn.MouseButton1Click:Connect(function()
-		setActiveTab(def.name)
-	end)
+    local btn  = createTabButton(def.name, def.icon, def.order)
+    local page = createTabPage(def.name)
+    tabs[def.name] = { button = btn, page = page }
+    btn.MouseButton1Click:Connect(function()
+        setActiveTab(def.name)
+    end)
 end
 
 -- ──────────────────────────────────────────────
--- Home Page Content
+-- Home Page
 -- ──────────────────────────────────────────────
 local homePage = tabs["Home"].page
 
@@ -368,16 +515,13 @@ homeWelcome.Font = Enum.Font.GothamBold
 homeWelcome.ZIndex = 13
 homeWelcome.LayoutOrder = 1
 homeWelcome.Parent = homePage
-
-local homeWelcomeCorner = Instance.new("UICorner")
-homeWelcomeCorner.CornerRadius = UDim.new(0, 8)
-homeWelcomeCorner.Parent = homeWelcome
+Instance.new("UICorner", homeWelcome).CornerRadius = UDim.new(0, 8)
 
 local homeDesc = Instance.new("TextLabel")
 homeDesc.Size = UDim2.new(1, 0, 0, 60)
 homeDesc.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
 homeDesc.BorderSizePixel = 0
-homeDesc.Text = "Use the sidebar to navigate.\nPress LControl to hide / show this menu."
+homeDesc.Text = "Use the sidebar to navigate between tabs.\nPress LControl to hide / show this menu."
 homeDesc.TextColor3 = Color3.fromRGB(160, 160, 200)
 homeDesc.TextSize = 13
 homeDesc.Font = Enum.Font.Gotham
@@ -385,50 +529,117 @@ homeDesc.TextWrapped = true
 homeDesc.ZIndex = 13
 homeDesc.LayoutOrder = 2
 homeDesc.Parent = homePage
+Instance.new("UICorner", homeDesc).CornerRadius = UDim.new(0, 8)
 
-local homeDescCorner = Instance.new("UICorner")
-homeDescCorner.CornerRadius = UDim.new(0, 8)
-homeDescCorner.Parent = homeDesc
+local homeCount = Instance.new("TextLabel")
+homeCount.Size = UDim2.new(1, 0, 0, 36)
+homeCount.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+homeCount.BorderSizePixel = 0
+homeCount.Text = "📦  " .. #SCRIPTS .. " scripts loaded"
+homeCount.TextColor3 = Color3.fromRGB(180, 180, 255)
+homeCount.TextSize = 13
+homeCount.Font = Enum.Font.GothamMedium
+homeCount.ZIndex = 13
+homeCount.LayoutOrder = 3
+homeCount.Parent = homePage
+Instance.new("UICorner", homeCount).CornerRadius = UDim.new(0, 8)
 
 -- ──────────────────────────────────────────────
--- Script Page Content
+-- Script Page — one card per script
 -- ──────────────────────────────────────────────
 local scriptPage = tabs["Script"].page
 
 local scriptHeader = Instance.new("TextLabel")
-scriptHeader.Size = UDim2.new(1, 0, 0, 36)
+scriptHeader.Size = UDim2.new(1, 0, 0, 34)
 scriptHeader.BackgroundColor3 = Color3.fromRGB(20, 20, 36)
 scriptHeader.BorderSizePixel = 0
-scriptHeader.Text = "📜  Scripts"
+scriptHeader.Text = "📜  Scripts  —  click Execute to run"
 scriptHeader.TextColor3 = Color3.fromRGB(200, 200, 255)
-scriptHeader.TextSize = 15
+scriptHeader.TextSize = 13
 scriptHeader.Font = Enum.Font.GothamBold
 scriptHeader.ZIndex = 13
-scriptHeader.LayoutOrder = 1
+scriptHeader.LayoutOrder = 0
 scriptHeader.Parent = scriptPage
+Instance.new("UICorner", scriptHeader).CornerRadius = UDim.new(0, 8)
 
-local scriptHeaderCorner = Instance.new("UICorner")
-scriptHeaderCorner.CornerRadius = UDim.new(0, 8)
-scriptHeaderCorner.Parent = scriptHeader
+for i, scriptData in ipairs(SCRIPTS) do
+    -- Card frame
+    local card = Instance.new("Frame")
+    card.Name = "ScriptCard_" .. i
+    card.Size = UDim2.new(1, 0, 0, 38)
+    card.BackgroundColor3 = Color3.fromRGB(22, 22, 36)
+    card.BorderSizePixel = 0
+    card.ZIndex = 13
+    card.LayoutOrder = i
+    card.Parent = scriptPage
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 7)
 
-local scriptPlaceholder = Instance.new("TextLabel")
-scriptPlaceholder.Size = UDim2.new(1, 0, 0, 50)
-scriptPlaceholder.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
-scriptPlaceholder.BorderSizePixel = 0
-scriptPlaceholder.Text = "No scripts loaded yet."
-scriptPlaceholder.TextColor3 = Color3.fromRGB(120, 120, 160)
-scriptPlaceholder.TextSize = 13
-scriptPlaceholder.Font = Enum.Font.Gotham
-scriptPlaceholder.ZIndex = 13
-scriptPlaceholder.LayoutOrder = 2
-scriptPlaceholder.Parent = scriptPage
+    local cardStroke = Instance.new("UIStroke")
+    cardStroke.Color = Color3.fromRGB(50, 50, 90)
+    cardStroke.Thickness = 1
+    cardStroke.Parent = card
 
-local scriptPlaceholderCorner = Instance.new("UICorner")
-scriptPlaceholderCorner.CornerRadius = UDim.new(0, 8)
-scriptPlaceholderCorner.Parent = scriptPlaceholder
+    -- Script name label
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, -100, 1, 0)
+    nameLabel.Position = UDim2.new(0, 10, 0, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = scriptData.display
+    nameLabel.TextColor3 = Color3.fromRGB(200, 200, 230)
+    nameLabel.TextSize = 13
+    nameLabel.Font = Enum.Font.GothamMedium
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    nameLabel.ZIndex = 14
+    nameLabel.Parent = card
+
+    -- Execute button
+    local execBtn = Instance.new("TextButton")
+    execBtn.Size = UDim2.new(0, 82, 0, 26)
+    execBtn.Position = UDim2.new(1, -90, 0.5, -13)
+    execBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
+    execBtn.BorderSizePixel = 0
+    execBtn.Text = "▶  Execute"
+    execBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    execBtn.TextSize = 12
+    execBtn.Font = Enum.Font.GothamBold
+    execBtn.ZIndex = 14
+    execBtn.Parent = card
+    Instance.new("UICorner", execBtn).CornerRadius = UDim.new(0, 6)
+
+    -- Capture variables for closure
+    local capturedCode    = scriptData.code
+    local capturedDisplay = scriptData.display
+    local capturedBtn     = execBtn
+    local capturedStroke  = cardStroke
+
+    execBtn.MouseButton1Click:Connect(function()
+        -- Visual feedback
+        capturedBtn.BackgroundColor3 = Color3.fromRGB(30, 140, 60)
+        capturedBtn.Text = "Running..."
+        capturedStroke.Color = Color3.fromRGB(60, 160, 80)
+
+        task.spawn(function()
+            local ok, err = pcall(loadstring, capturedCode)
+            if ok then
+                if type(loadstring(capturedCode)) == "function" then
+                    pcall(loadstring(capturedCode))
+                end
+            end
+        end)
+
+        showExecToast(capturedDisplay)
+
+        task.delay(1.5, function()
+            capturedBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
+            capturedBtn.Text = "▶  Execute"
+            capturedStroke.Color = Color3.fromRGB(50, 50, 90)
+        end)
+    end)
+end
 
 -- ──────────────────────────────────────────────
--- Default Active Tab
+-- Default Tab
 -- ──────────────────────────────────────────────
 setActiveTab("Home")
 
@@ -438,76 +649,71 @@ setActiveTab("Home")
 local dragging, dragStart, startPos
 
 TitleBar.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		dragStart = input.Position
-		startPos = MenuFrame.Position
-	end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = MenuFrame.Position
+    end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-		local delta = input.Position - dragStart
-		MenuFrame.Position = UDim2.new(
-			startPos.X.Scale, startPos.X.Offset + delta.X,
-			startPos.Y.Scale, startPos.Y.Offset + delta.Y
-		)
-	end
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        MenuFrame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = false
-	end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
 end)
 
 -- ──────────────────────────────────────────────
--- Open / Close / Minimize Logic
+-- Open / Close / Minimize
 -- ──────────────────────────────────────────────
 local menuOpen = false
 
 local function openMenu()
-	menuOpen = true
-	MenuFrame.Visible = true
+    menuOpen = true
+    MenuFrame.Visible = true
 end
 
 local function hideMenu()
-	menuOpen = false
-	MenuFrame.Visible = false
-	-- Show notification hint
-	showNotification()
+    menuOpen = false
+    MenuFrame.Visible = false
+    showNotification()
 end
 
--- Close button → confirm dialog
 CloseBtn.MouseButton1Click:Connect(function()
-	ConfirmDialog.Visible = true
+    ConfirmDialog.Visible = true
 end)
 
 DialogYes.MouseButton1Click:Connect(function()
-	ConfirmDialog.Visible = false
-	hideMenu()
+    ConfirmDialog.Visible = false
+    hideMenu()
 end)
 
 DialogNo.MouseButton1Click:Connect(function()
-	ConfirmDialog.Visible = false
+    ConfirmDialog.Visible = false
 end)
 
--- Minimize button
 MinimizeBtn.MouseButton1Click:Connect(function()
-	hideMenu()
+    hideMenu()
 end)
 
--- LControl toggles menu
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
-	if input.KeyCode == Enum.KeyCode.LeftControl then
-		if menuOpen then
-			hideMenu()
-		else
-			openMenu()
-		end
-	end
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.LeftControl then
+        if menuOpen then
+            hideMenu()
+        else
+            openMenu()
+        end
+    end
 end)
 
--- Show menu initially
 openMenu()

