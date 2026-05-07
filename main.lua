@@ -1,13 +1,11 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local event = ReplicatedStorage:WaitForChild("TeleportEvent")
-
-local button = script.Parent
-local frame = button.Parent -- Assumes textboxes are in the same frame
+local event = script.Parent:WaitForChild("TeleportEvent")
+local button = script.Parent:WaitForChild("TPButton") -- Adjust name to match your button
+local frame = script.Parent
 
 button.MouseButton1Click:Connect(function()
 	local p1Name = frame.Player1Input.Text
 	local p2Name = frame.Player2Input.Text
 	
-	-- Fire the event to the server
+	-- Send names to the server script in the same folder
 	event:FireServer(p1Name, p2Name)
 end)
