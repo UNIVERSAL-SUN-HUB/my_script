@@ -1232,6 +1232,89 @@ mkBtn.Activated:Connect(function()
     end)
 end)
 
+-- ── Rejoin card ──────────────────────────────
+local rjCard = Instance.new("Frame")
+rjCard.Size = UDim2.new(1, 0, 0, 60)
+rjCard.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
+rjCard.BorderSizePixel = 0
+rjCard.ZIndex = 13
+rjCard.LayoutOrder = 4
+rjCard.Parent = featPage
+Instance.new("UICorner", rjCard).CornerRadius = UDim.new(0, 8)
+
+local rjStroke = Instance.new("UIStroke")
+rjStroke.Color = Color3.fromRGB(55, 55, 100)
+rjStroke.Thickness = 1.2
+rjStroke.Parent = rjCard
+
+local rjLabel = Instance.new("TextLabel")
+rjLabel.Size = UDim2.new(1, -160, 1, 0)
+rjLabel.Position = UDim2.new(0, 12, 0, 0)
+rjLabel.BackgroundTransparency = 1
+rjLabel.Text = "🔄  Rejoin"
+rjLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+rjLabel.TextSize = 14
+rjLabel.Font = Enum.Font.GothamBold
+rjLabel.TextXAlignment = Enum.TextXAlignment.Left
+rjLabel.ZIndex = 14
+rjLabel.Parent = rjCard
+
+local rjSub = Instance.new("TextLabel")
+rjSub.Size = UDim2.new(1, -160, 0, 16)
+rjSub.Position = UDim2.new(0, 12, 0, 32)
+rjSub.BackgroundTransparency = 1
+rjSub.Text = "Same server  ·  or hop to new server"
+rjSub.TextColor3 = Color3.fromRGB(110, 110, 150)
+rjSub.TextSize = 11
+rjSub.Font = Enum.Font.Gotham
+rjSub.TextXAlignment = Enum.TextXAlignment.Left
+rjSub.ZIndex = 14
+rjSub.Parent = rjCard
+
+local rjSameBtn = Instance.new("TextButton")
+rjSameBtn.Size = UDim2.new(0, 62, 0, 28)
+rjSameBtn.Position = UDim2.new(1, -148, 0.5, -14)
+rjSameBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 180)
+rjSameBtn.BorderSizePixel = 0
+rjSameBtn.Text = "Rejoin"
+rjSameBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+rjSameBtn.TextSize = 12
+rjSameBtn.Font = Enum.Font.GothamBold
+rjSameBtn.ZIndex = 15
+rjSameBtn.Parent = rjCard
+Instance.new("UICorner", rjSameBtn).CornerRadius = UDim.new(0, 6)
+
+local rjNewBtn = Instance.new("TextButton")
+rjNewBtn.Size = UDim2.new(0, 76, 0, 28)
+rjNewBtn.Position = UDim2.new(1, -78, 0.5, -14)
+rjNewBtn.BackgroundColor3 = Color3.fromRGB(55, 40, 110)
+rjNewBtn.BorderSizePixel = 0
+rjNewBtn.Text = "New Server"
+rjNewBtn.TextColor3 = Color3.fromRGB(200, 180, 255)
+rjNewBtn.TextSize = 11
+rjNewBtn.Font = Enum.Font.GothamBold
+rjNewBtn.ZIndex = 15
+rjNewBtn.Parent = rjCard
+Instance.new("UICorner", rjNewBtn).CornerRadius = UDim.new(0, 6)
+
+rjSameBtn.Activated:Connect(function()
+    rjSameBtn.Text = "..."
+    pcall(function()
+        game:GetService("TeleportService"):TeleportToPlaceInstance(
+            game.PlaceId, game.JobId, Players.LocalPlayer
+        )
+    end)
+    task.delay(3, function() rjSameBtn.Text = "Rejoin" end)
+end)
+
+rjNewBtn.Activated:Connect(function()
+    rjNewBtn.Text = "..."
+    pcall(function()
+        game:GetService("TeleportService"):Teleport(game.PlaceId, Players.LocalPlayer)
+    end)
+    task.delay(3, function() rjNewBtn.Text = "New Server" end)
+end)
+
 -- ──────────────────────────────────────────────
 -- Default Tab
 -- ──────────────────────────────────────────────
@@ -1285,14 +1368,19 @@ hideMenu = function(showNotif)
 end
 
 local keyBindConn
+local teleportConn
+local pingMonitorRunning = true
 
 local function destroyAll()
+    -- Stop monitors
+    pingMonitorRunning = false
     -- Disconnect all external connections
     dragChangedConn:Disconnect()
     dragEndedConn:Disconnect()
-    if keyBindConn then keyBindConn:Disconnect() end
-    if ijConnection then ijConnection:Disconnect() end
-    if mkKeyConn then mkKeyConn:Disconnect() end
+    if keyBindConn    then keyBindConn:Disconnect()    end
+    if ijConnection   then ijConnection:Disconnect()   end
+    if mkKeyConn      then mkKeyConn:Disconnect()      end
+    if teleportConn   then teleportConn:Disconnect()   end
     -- Destroy the entire GUI
     ScreenGui:Destroy()
 end
@@ -1325,3 +1413,58 @@ keyBindConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 openMenu()
+
+-- ──────────────────────────────────────────────
+-- Auto re-execute on teleport
+-- ──────────────────────────────────────────────
+local LOADER_URL = "https://raw.githubusercontent.com/naitikthakur8273-alt/my_script/refs/heads/main/loader.lua"
+
+teleportConn = Players.LocalPlayer.OnTeleport:Connect(function(state, placeId, spawnName)
+    if state == Enum.TeleportState.Started then
+        task.delay(4, function()
+            pcall(function()
+                local fn = loadstring(game:HttpGet(LOADER_URL))
+                if fn then fn() end
+            end)
+        end)
+    elseif state == Enum.TeleportState.Failed then
+        ExecToastLabel.Text = "⚠  Teleport failed — retrying..."
+        ExecToastLabel.TextColor3 = Color3.fromRGB(255, 160, 60)
+        TweenService:Create(ExecToast, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Position = UDim2.new(0.5, -140, 1, -56)
+        }):Play()
+        task.delay(2, function()
+            TweenService:Create(ExecToast, TweenInfo.new(0.3), {
+                Position = UDim2.new(0.5, -140, 1, 10)
+            }):Play()
+            pcall(function()
+                game:GetService("TeleportService"):Teleport(game.PlaceId, Players.LocalPlayer)
+            end)
+        end)
+    end
+end)
+
+-- ──────────────────────────────────────────────
+-- Network ping monitor — auto-rejoin on disconnect
+-- ──────────────────────────────────────────────
+task.spawn(function()
+    local warned = false
+    while pingMonitorRunning do
+        task.wait(6)
+        if not pingMonitorRunning then break end
+        local ok, ping = pcall(function() return Players:GetNetworkPing() end)
+        if ok and ping and ping > 5 and not warned then
+            warned = true
+            ExecToastLabel.Text = "📡  Connection lost — rejoining..."
+            ExecToastLabel.TextColor3 = Color3.fromRGB(255, 120, 60)
+            TweenService:Create(ExecToast, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Position = UDim2.new(0.5, -140, 1, -56)
+            }):Play()
+            task.delay(2.5, function()
+                pcall(function()
+                    game:GetService("TeleportService"):Teleport(game.PlaceId, Players.LocalPlayer)
+                end)
+            end)
+        end
+    end
+end)
