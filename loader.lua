@@ -503,8 +503,9 @@ local function setActiveTab(name)
 end
 
 local tabDefs = {
-    { name = "Home",   icon = "🏠", order = 1 },
-    { name = "Script", icon = "📜", order = 2 },
+    { name = "Home",     icon = "🏠", order = 1 },
+    { name = "Script",   icon = "📜", order = 2 },
+    { name = "Executor", icon = "⚙️", order = 3 },
 }
 
 for _, def in ipairs(tabDefs) do
@@ -779,6 +780,227 @@ for i, scriptData in ipairs(SCRIPTS) do
         end)
     end)
 end
+
+-- ──────────────────────────────────────────────
+-- Executor Page
+-- ──────────────────────────────────────────────
+local execPage = tabs["Executor"].page
+
+-- Header
+local execHeader = Instance.new("TextLabel")
+execHeader.Size = UDim2.new(1, 0, 0, 34)
+execHeader.BackgroundColor3 = Color3.fromRGB(20, 20, 36)
+execHeader.BorderSizePixel = 0
+execHeader.Text = "⚙️  Executor  —  write & run Lua"
+execHeader.TextColor3 = Color3.fromRGB(200, 200, 255)
+execHeader.TextSize = 13
+execHeader.Font = Enum.Font.GothamBold
+execHeader.ZIndex = 13
+execHeader.LayoutOrder = 1
+execHeader.Parent = execPage
+Instance.new("UICorner", execHeader).CornerRadius = UDim.new(0, 8)
+
+-- Code editor frame
+local editorFrame = Instance.new("Frame")
+editorFrame.Size = UDim2.new(1, 0, 0, 170)
+editorFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 20)
+editorFrame.BorderSizePixel = 0
+editorFrame.ZIndex = 13
+editorFrame.LayoutOrder = 2
+editorFrame.Parent = execPage
+Instance.new("UICorner", editorFrame).CornerRadius = UDim.new(0, 8)
+
+local editorStroke = Instance.new("UIStroke")
+editorStroke.Color = Color3.fromRGB(55, 55, 100)
+editorStroke.Thickness = 1.2
+editorStroke.Parent = editorFrame
+
+-- Line numbers column
+local lineNumFrame = Instance.new("Frame")
+lineNumFrame.Size = UDim2.new(0, 26, 1, -8)
+lineNumFrame.Position = UDim2.new(0, 4, 0, 4)
+lineNumFrame.BackgroundTransparency = 1
+lineNumFrame.ZIndex = 14
+lineNumFrame.Parent = editorFrame
+
+local lineNumLabel = Instance.new("TextLabel")
+lineNumLabel.Size = UDim2.new(1, 0, 1, 0)
+lineNumLabel.BackgroundTransparency = 1
+lineNumLabel.Text = "1\n2\n3\n4\n5\n6\n7\n8"
+lineNumLabel.TextColor3 = Color3.fromRGB(70, 70, 110)
+lineNumLabel.TextSize = 12
+lineNumLabel.Font = Enum.Font.Code
+lineNumLabel.TextXAlignment = Enum.TextXAlignment.Right
+lineNumLabel.TextYAlignment = Enum.TextYAlignment.Top
+lineNumLabel.ZIndex = 14
+lineNumLabel.Parent = lineNumFrame
+
+-- Code TextBox
+local codeBox = Instance.new("TextBox")
+codeBox.Size = UDim2.new(1, -36, 1, -8)
+codeBox.Position = UDim2.new(0, 32, 0, 4)
+codeBox.BackgroundTransparency = 1
+codeBox.Text = 'print("Hello World")'
+codeBox.PlaceholderText = "-- Write your Lua code here..."
+codeBox.PlaceholderColor3 = Color3.fromRGB(70, 70, 110)
+codeBox.TextColor3 = Color3.fromRGB(180, 220, 255)
+codeBox.TextSize = 12
+codeBox.Font = Enum.Font.Code
+codeBox.TextXAlignment = Enum.TextXAlignment.Left
+codeBox.TextYAlignment = Enum.TextYAlignment.Top
+codeBox.MultiLine = true
+codeBox.ClearTextOnFocus = false
+codeBox.ZIndex = 14
+codeBox.Parent = editorFrame
+
+-- Update line numbers when code changes
+codeBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local lines = 1
+    for _ in codeBox.Text:gmatch("\n") do lines = lines + 1 end
+    local nums = {}
+    for i = 1, math.max(lines, 8) do nums[i] = tostring(i) end
+    lineNumLabel.Text = table.concat(nums, "\n")
+end)
+
+-- Focus glow
+codeBox.Focused:Connect(function()
+    TweenService:Create(editorStroke, TweenInfo.new(0.15), {
+        Color = Color3.fromRGB(90, 90, 180)
+    }):Play()
+end)
+codeBox.FocusLost:Connect(function()
+    TweenService:Create(editorStroke, TweenInfo.new(0.15), {
+        Color = Color3.fromRGB(55, 55, 100)
+    }):Play()
+end)
+
+-- Button row
+local btnRow = Instance.new("Frame")
+btnRow.Size = UDim2.new(1, 0, 0, 34)
+btnRow.BackgroundTransparency = 1
+btnRow.ZIndex = 13
+btnRow.LayoutOrder = 3
+btnRow.Parent = execPage
+
+local btnRowLayout = Instance.new("UIListLayout")
+btnRowLayout.FillDirection = Enum.FillDirection.Horizontal
+btnRowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+btnRowLayout.Padding = UDim.new(0, 6)
+btnRowLayout.Parent = btnRow
+
+-- Run button
+local runBtn = Instance.new("TextButton")
+runBtn.Size = UDim2.new(0, 110, 0, 34)
+runBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
+runBtn.BorderSizePixel = 0
+runBtn.Text = "▶  Run"
+runBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+runBtn.TextSize = 13
+runBtn.Font = Enum.Font.GothamBold
+runBtn.ZIndex = 14
+runBtn.LayoutOrder = 1
+runBtn.Parent = btnRow
+Instance.new("UICorner", runBtn).CornerRadius = UDim.new(0, 7)
+
+-- Clear button
+local clearBtn = Instance.new("TextButton")
+clearBtn.Size = UDim2.new(0, 80, 0, 34)
+clearBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+clearBtn.BorderSizePixel = 0
+clearBtn.Text = "🗑  Clear"
+clearBtn.TextColor3 = Color3.fromRGB(200, 200, 255)
+clearBtn.TextSize = 13
+clearBtn.Font = Enum.Font.GothamBold
+clearBtn.ZIndex = 14
+clearBtn.LayoutOrder = 2
+clearBtn.Parent = btnRow
+Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 7)
+
+-- Output box
+local outputFrame = Instance.new("Frame")
+outputFrame.Size = UDim2.new(1, 0, 0, 80)
+outputFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+outputFrame.BorderSizePixel = 0
+outputFrame.ZIndex = 13
+outputFrame.LayoutOrder = 4
+outputFrame.Parent = execPage
+Instance.new("UICorner", outputFrame).CornerRadius = UDim.new(0, 8)
+
+local outputStroke = Instance.new("UIStroke")
+outputStroke.Color = Color3.fromRGB(50, 50, 90)
+outputStroke.Thickness = 1
+outputStroke.Parent = outputFrame
+
+local outputLabel = Instance.new("TextLabel")
+outputLabel.Size = UDim2.new(1, -10, 1, -8)
+outputLabel.Position = UDim2.new(0, 6, 0, 4)
+outputLabel.BackgroundTransparency = 1
+outputLabel.Text = "-- Output will appear here"
+outputLabel.TextColor3 = Color3.fromRGB(90, 90, 130)
+outputLabel.TextSize = 12
+outputLabel.Font = Enum.Font.Code
+outputLabel.TextXAlignment = Enum.TextXAlignment.Left
+outputLabel.TextYAlignment = Enum.TextYAlignment.Top
+outputLabel.TextWrapped = true
+outputLabel.ZIndex = 14
+outputLabel.Parent = outputFrame
+
+-- Run logic
+local function runCode()
+    local code = codeBox.Text
+    if code:gsub("%s", "") == "" then return end
+
+    runBtn.Text = "Running..."
+    runBtn.BackgroundColor3 = Color3.fromRGB(30, 120, 50)
+    outputLabel.TextColor3 = Color3.fromRGB(90, 90, 130)
+    outputLabel.Text = "-- Running..."
+
+    task.spawn(function()
+        -- Capture print output by overriding print temporarily
+        local outputs = {}
+        local oldPrint = print
+        getfenv and pcall(function()
+            getfenv(0).print = function(...)
+                local parts = {}
+                for _, v in ipairs({...}) do
+                    table.insert(parts, tostring(v))
+                end
+                table.insert(outputs, table.concat(parts, "\t"))
+            end
+        end)
+
+        local fn, compileErr = loadstring(code)
+        if not fn then
+            outputLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+            outputLabel.Text = "❌  " .. tostring(compileErr)
+        else
+            local ok, runtimeErr = pcall(fn)
+            if ok then
+                outputLabel.TextColor3 = Color3.fromRGB(100, 220, 130)
+                outputLabel.Text = #outputs > 0
+                    and table.concat(outputs, "\n")
+                    or "✅  Executed successfully"
+            else
+                outputLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+                outputLabel.Text = "❌  " .. tostring(runtimeErr)
+            end
+        end
+
+        -- Restore print
+        pcall(function() getfenv(0).print = oldPrint end)
+
+        runBtn.Text = "▶  Run"
+        runBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
+    end)
+end
+
+runBtn.Activated:Connect(runCode)
+
+clearBtn.Activated:Connect(function()
+    codeBox.Text = ""
+    outputLabel.TextColor3 = Color3.fromRGB(90, 90, 130)
+    outputLabel.Text = "-- Output will appear here"
+end)
 
 -- ──────────────────────────────────────────────
 -- Default Tab
