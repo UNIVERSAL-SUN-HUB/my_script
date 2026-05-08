@@ -43,7 +43,8 @@ local function saveSettings()
         "espEnabled="    .. tostring(settings.espEnabled),
         "hitboxEnabled=" .. tostring(settings.hitboxEnabled),
         "hitboxSizeVal=" .. tostring(settings.hitboxSizeVal),
-        "flingEnabled="  .. tostring(settings.flingEnabled),
+        "flingEnabled="       .. tostring(settings.flingEnabled),
+        "fullBrightEnabled="  .. tostring(settings.fullBrightEnabled),
     }
     pcall(function() writefile(SETTINGS_FILE, table.concat(lines, "\n")) end)
 end
@@ -63,7 +64,8 @@ pcall(function()
             elseif key == "espEnabled"    then settings.espEnabled    = (val == "true")
             elseif key == "hitboxEnabled" then settings.hitboxEnabled = (val == "true")
             elseif key == "hitboxSizeVal" then settings.hitboxSizeVal = tonumber(val) or 5
-            elseif key == "flingEnabled"  then settings.flingEnabled  = (val == "true")
+            elseif key == "flingEnabled"      then settings.flingEnabled      = (val == "true")
+            elseif key == "fullBrightEnabled" then settings.fullBrightEnabled = (val == "true")
             end
         end
     end
@@ -508,6 +510,68 @@ Players.LocalPlayer.CharacterAdded:Connect(function()
     end
 end)
 
+-- ── Full Bright ────────────────────────────────
+local fullBrightEnabled = false
+local Lighting = game:GetService("Lighting")
+
+local origLighting = {
+    Brightness       = Lighting.Brightness,
+    ClockTime        = Lighting.ClockTime,
+    FogEnd           = Lighting.FogEnd,
+    FogStart         = Lighting.FogStart,
+    Ambient          = Lighting.Ambient,
+    OutdoorAmbient   = Lighting.OutdoorAmbient,
+    GlobalShadows    = Lighting.GlobalShadows,
+}
+
+local function setFullBrightToggle(state)
+    fullBrightEnabled              = state
+    settings.fullBrightEnabled     = state
+    saveSettings()
+    if state then
+        Lighting.Brightness      = 2
+        Lighting.ClockTime       = 14
+        Lighting.FogEnd          = 100000
+        Lighting.FogStart        = 100000
+        Lighting.Ambient         = Color3.fromRGB(178, 178, 178)
+        Lighting.OutdoorAmbient  = Color3.fromRGB(178, 178, 178)
+        Lighting.GlobalShadows   = false
+        for _, effect in pairs(Lighting:GetChildren()) do
+            if effect:IsA("BlurEffect")
+            or effect:IsA("ColorCorrectionEffect")
+            or effect:IsA("SunRaysEffect")
+            or effect:IsA("BloomEffect")
+            or effect:IsA("DepthOfFieldEffect")
+            then
+                effect.Enabled = false
+            end
+        end
+    else
+        Lighting.Brightness      = origLighting.Brightness
+        Lighting.ClockTime       = origLighting.ClockTime
+        Lighting.FogEnd          = origLighting.FogEnd
+        Lighting.FogStart        = origLighting.FogStart
+        Lighting.Ambient         = origLighting.Ambient
+        Lighting.OutdoorAmbient  = origLighting.OutdoorAmbient
+        Lighting.GlobalShadows   = origLighting.GlobalShadows
+        for _, effect in pairs(Lighting:GetChildren()) do
+            if effect:IsA("BlurEffect")
+            or effect:IsA("ColorCorrectionEffect")
+            or effect:IsA("SunRaysEffect")
+            or effect:IsA("BloomEffect")
+            or effect:IsA("DepthOfFieldEffect")
+            then
+                effect.Enabled = true
+            end
+        end
+    end
+end
+
+-- Apply on startup if saved as enabled
+if settings.fullBrightEnabled then
+    setFullBrightToggle(true)
+end
+
 -- ──────────────────────────────────────────────
 -- Kill Script  (forward declaration — assigned after all features)
 -- ──────────────────────────────────────────────
@@ -733,6 +797,15 @@ FeaturesTab:CreateSlider({
         settings.flySpeedVal  = Value
         saveSettings()
     end,
+})
+
+FeaturesTab:CreateSection("Visual")
+
+FeaturesTab:CreateToggle({
+    Name         = "☀️  Full Bright  (see clearly day & night)",
+    CurrentValue = settings.fullBrightEnabled,
+    Flag         = "FullBright",
+    Callback     = function(Value) setFullBrightToggle(Value) end,
 })
 
 FeaturesTab:CreateSection("Player")
