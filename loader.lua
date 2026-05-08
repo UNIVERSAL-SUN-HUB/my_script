@@ -15,6 +15,7 @@ local SETTINGS_FILE = "naitik_hub_settings.txt"
 local settings = {
     menuKey       = "LeftControl",
     ijEnabled     = false,
+    speedEnabled  = false,
     speedVal      = 16,
     spinEnabled   = false,
     spinSpeedVal  = 20,
@@ -31,6 +32,7 @@ local function saveSettings()
     local lines = {
         "menuKey="       .. settings.menuKey,
         "ijEnabled="     .. tostring(settings.ijEnabled),
+        "speedEnabled="  .. tostring(settings.speedEnabled),
         "speedVal="      .. tostring(settings.speedVal),
         "spinEnabled="   .. tostring(settings.spinEnabled),
         "spinSpeedVal="  .. tostring(settings.spinSpeedVal),
@@ -50,6 +52,7 @@ pcall(function()
         for key, val in readfile(SETTINGS_FILE):gmatch("([%w]+)=([^\n]+)") do
             if     key == "menuKey"       then settings.menuKey       = val
             elseif key == "ijEnabled"     then settings.ijEnabled     = (val == "true")
+            elseif key == "speedEnabled"  then settings.speedEnabled  = (val == "true")
             elseif key == "speedVal"      then settings.speedVal      = tonumber(val) or 16
             elseif key == "spinEnabled"   then settings.spinEnabled   = (val == "true")
             elseif key == "spinSpeedVal"  then settings.spinSpeedVal  = tonumber(val) or 20
@@ -129,18 +132,26 @@ end
 
 -- ── Walk Speed ────────────────────────────────
 local currentWalkSpeed = settings.speedVal
+local speedEnabled     = settings.speedEnabled
 
 local function applyWalkSpeed()
     local char = Players.LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then
-        char.Humanoid.WalkSpeed = currentWalkSpeed
+        char.Humanoid.WalkSpeed = speedEnabled and currentWalkSpeed or 16
     end
+end
+
+local function setSpeedToggle(state)
+    speedEnabled          = state
+    settings.speedEnabled = state
+    saveSettings()
+    applyWalkSpeed()
 end
 
 Players.LocalPlayer.CharacterAdded:Connect(function(char)
     local hum = char:WaitForChild("Humanoid")
     task.wait(0.2)
-    hum.WalkSpeed = currentWalkSpeed
+    hum.WalkSpeed = speedEnabled and currentWalkSpeed or 16
 end)
 
 -- ── Spin ──────────────────────────────────────
@@ -638,6 +649,13 @@ FeaturesTab:CreateToggle({
     Callback     = function(Value) setIJToggle(Value) end,
 })
 
+FeaturesTab:CreateToggle({
+    Name         = "⚡  Speed Boost  (off = default 16)",
+    CurrentValue = settings.speedEnabled,
+    Flag         = "SpeedBoost",
+    Callback     = function(Value) setSpeedToggle(Value) end,
+})
+
 FeaturesTab:CreateSlider({
     Name         = "⚡  Walk Speed",
     Range        = { 0, 500 },
@@ -649,7 +667,7 @@ FeaturesTab:CreateSlider({
         currentWalkSpeed  = Value
         settings.speedVal = Value
         saveSettings()
-        applyWalkSpeed()
+        if speedEnabled then applyWalkSpeed() end
     end,
 })
 
@@ -768,6 +786,7 @@ FeaturesTab:CreateButton({
     Callback = function()
         settings.menuKey       = "LeftControl"
         settings.ijEnabled     = false
+        settings.speedEnabled  = false
         settings.speedVal      = 16
         settings.spinEnabled   = false
         settings.spinSpeedVal  = 20
@@ -780,6 +799,7 @@ FeaturesTab:CreateButton({
         settings.flingEnabled  = false
         saveSettings()
         setIJToggle(false)
+        setSpeedToggle(false)
         setSpinToggle(false)
         setNoclipToggle(false)
         setFlyToggle(false)
@@ -787,7 +807,6 @@ FeaturesTab:CreateButton({
         setHitboxToggle(false)
         setFlingToggle(false)
         currentWalkSpeed = 16
-        applyWalkSpeed()
         Rayfield:Notify({ Title = "Reset", Content = "All settings reset to defaults.", Duration = 3 })
     end,
 })
@@ -841,4 +860,135 @@ task.spawn(function()
             end)
         end
     end
+end)
+
+-- ──────────────────────────────────────────────
+-- Floating "N" Toggle Button  (mobile-friendly)
+-- Drag to reposition · tap to show/hide the hub
+-- ──────────────────────────────────────────────
+task.spawn(function()
+    -- Give Rayfield a moment to fully build its GUI
+    task.wait(2)
+
+    local TweenService = game:GetService("TweenService")
+    local playerGui    = player:WaitForChild("PlayerGui")
+
+    local FloatGui = Instance.new("ScreenGui")
+    FloatGui.Name            = "NaitikFloatBtn"
+    FloatGui.ResetOnSpawn    = false
+    FloatGui.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
+    FloatGui.DisplayOrder    = 999
+    FloatGui.Parent          = playerGui
+
+    -- Outer glow ring
+    local Ring = Instance.new("Frame")
+    Ring.Size             = UDim2.new(0, 56, 0, 56)
+    Ring.Position         = UDim2.new(0, 16, 0.5, -28)
+    Ring.BackgroundColor3 = Color3.fromRGB(80, 100, 255)
+    Ring.BorderSizePixel  = 0
+    Ring.ZIndex           = 1
+    Ring.Parent           = FloatGui
+    Instance.new("UICorner", Ring).CornerRadius = UDim.new(1, 0)
+
+    local RingGrad = Instance.new("UIGradient")
+    RingGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 130, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 60, 255)),
+    })
+    RingGrad.Rotation = 135
+    RingGrad.Parent   = Ring
+
+    -- Main button (sits 3px inside the ring)
+    local Btn = Instance.new("TextButton")
+    Btn.Size             = UDim2.new(0, 50, 0, 50)
+    Btn.Position         = UDim2.new(0.5, -25, 0.5, -25)
+    Btn.BackgroundColor3 = Color3.fromRGB(14, 14, 24)
+    Btn.BorderSizePixel  = 0
+    Btn.Text             = "N"
+    Btn.TextColor3       = Color3.fromRGB(200, 210, 255)
+    Btn.TextSize         = 24
+    Btn.Font             = Enum.Font.GothamBold
+    Btn.ZIndex           = 2
+    Btn.Parent           = Ring
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(1, 0)
+
+    -- Pulse animation on the ring
+    local function pulseRing()
+        TweenService:Create(Ring, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+            BackgroundTransparency = 0.5,
+        }):Play()
+    end
+    pulseRing()
+
+    -- ── Drag logic (tap = toggle, drag = move) ────
+    local dragging  = false
+    local isDrag    = false
+    local dragStart = nil
+    local startPos  = nil
+    local DRAG_THRESHOLD = 6  -- pixels before we consider it a drag
+
+    local hubVisible = true
+
+    local function toggleHub()
+        local rayfieldGui = playerGui:FindFirstChild("Rayfield")
+        if rayfieldGui then
+            hubVisible        = not hubVisible
+            rayfieldGui.Enabled = hubVisible
+            -- Visual feedback: dim the N button when hub is hidden
+            TweenService:Create(Btn, TweenInfo.new(0.2), {
+                TextColor3       = hubVisible and Color3.fromRGB(200, 210, 255) or Color3.fromRGB(100, 100, 140),
+                BackgroundColor3 = hubVisible and Color3.fromRGB(14, 14, 24)    or Color3.fromRGB(8, 8, 16),
+            }):Play()
+            TweenService:Create(Ring, TweenInfo.new(0.2), {
+                BackgroundColor3 = hubVisible and Color3.fromRGB(80, 100, 255) or Color3.fromRGB(40, 40, 80),
+            }):Play()
+            RingGrad.Color = hubVisible
+                and ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 130, 255)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 60, 255)),
+                })
+                or ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 80)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 40, 80)),
+                })
+        end
+    end
+
+    -- Use UserInputService for smooth global tracking during drag
+    Btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging  = true
+            isDrag    = false
+            dragStart = input.Position
+            startPos  = Ring.Position
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if not dragging then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+            local delta = input.Position - dragStart
+            if delta.Magnitude > DRAG_THRESHOLD then
+                isDrag = true
+                Ring.Position = UDim2.new(
+                    startPos.X.Scale,  startPos.X.Offset  + delta.X,
+                    startPos.Y.Scale,  startPos.Y.Offset  + delta.Y
+                )
+            end
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            if dragging and not isDrag then
+                -- Short tap → toggle hub
+                toggleHub()
+            end
+            dragging = false
+            isDrag   = false
+        end
+    end)
 end)
