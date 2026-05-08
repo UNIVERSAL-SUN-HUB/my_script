@@ -577,10 +577,42 @@ end
 -- ──────────────────────────────────────────────
 local killScript
 
+-- Shared hub state (used by N button, menuKey, and killScript)
+local hubVisible = true
+local hubKilled  = false
+local _floatGui  = nil   -- assigned when the N button is built
+
+local function findRayfieldGui()
+    local pg = player:WaitForChild("PlayerGui"):FindFirstChild("Rayfield")
+    if pg then return pg end
+    local ok, cg = pcall(function()
+        return game:GetService("CoreGui"):FindFirstChild("Rayfield")
+    end)
+    if ok then return cg end
+    return nil
+end
+
+local function toggleRayfieldUI()
+    if hubKilled then return end
+    local rg = findRayfieldGui()
+    if rg then
+        hubVisible  = not hubVisible
+        rg.Enabled  = hubVisible
+    end
+end
+
 -- ──────────────────────────────────────────────
 -- Load Rayfield UI Library
 -- ──────────────────────────────────────────────
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+
+-- Wire menuKey → toggle Rayfield (works like K on PC)
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe or hubKilled then return end
+    if input.KeyCode == menuKey then
+        toggleRayfieldUI()
+    end
+end)
 
 -- ──────────────────────────────────────────────
 -- Main Window
@@ -902,6 +934,9 @@ FeaturesTab:CreateButton({
 -- Kill Script  (full cleanup — nothing survives)
 -- ──────────────────────────────────────────────
 killScript = function()
+    -- Mark as killed first so key/button do nothing after this
+    hubKilled = true
+
     -- 1. Stop every feature cleanly
     pcall(function() setIJToggle(false) end)
     pcall(function() setSpeedToggle(false) end)
@@ -911,19 +946,18 @@ killScript = function()
     pcall(function() setESPToggle(false) end)
     pcall(function() setHitboxToggle(false) end)
     pcall(function() setFlingToggle(false) end)
+    pcall(function() setFullBrightToggle(false) end)
 
     -- 2. Hard-restore the local character to a clean state
     pcall(function()
         local char = Players.LocalPlayer.Character
         if not char then return end
-        -- Reset walk speed
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then
-            hum.WalkSpeed   = 16
-            hum.JumpPower   = 50
+            hum.WalkSpeed     = 16
+            hum.JumpPower     = 50
             hum.PlatformStand = false
         end
-        -- Kill any leftover motor objects (BodyGyro, BodyVelocity, BodyAngularVelocity)
         local root = char:FindFirstChild("HumanoidRootPart")
         if root then
             for _, obj in pairs(root:GetChildren()) do
@@ -932,7 +966,6 @@ killScript = function()
                 end
             end
         end
-        -- Restore CanCollide on all parts
         for _, part in pairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.CanCollide = true
@@ -953,15 +986,24 @@ killScript = function()
         end
     end)
 
-    -- 4. Destroy the floating N button
+    -- 4. Destroy the floating N button via the global reference
     pcall(function()
+        if _floatGui and _floatGui.Parent then
+            _floatGui:Destroy()
+            _floatGui = nil
+        end
+        -- Fallback: search by name
         local nb = player:WaitForChild("PlayerGui"):FindFirstChild("NaitikFloatBtn")
         if nb then nb:Destroy() end
     end)
 
-    -- 5. Destroy the Rayfield GUI last (this removes the entire hub window)
+    -- 5. Destroy Rayfield — check both PlayerGui and CoreGui
     pcall(function()
         local rg = player:WaitForChild("PlayerGui"):FindFirstChild("Rayfield")
+        if rg then rg:Destroy() end
+    end)
+    pcall(function()
+        local rg = game:GetService("CoreGui"):FindFirstChild("Rayfield")
         if rg then rg:Destroy() end
     end)
 end
@@ -1030,6 +1072,7 @@ task.spawn(function()
 
     local FloatGui = Instance.new("ScreenGui")
     FloatGui.Name            = "NaitikFloatBtn"
+    _floatGui                = FloatGui   -- expose to killScript
     FloatGui.ResetOnSpawn    = false
     FloatGui.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
     FloatGui.DisplayOrder    = 999
@@ -1082,31 +1125,31 @@ task.spawn(function()
     local startPos  = nil
     local DRAG_THRESHOLD = 6  -- pixels before we consider it a drag
 
-    local hubVisible = true
+    -- Visual update for N button after a toggle (syncs button colour to hubVisible)
+    local function updateBtnVisual()
+        TweenService:Create(Btn, TweenInfo.new(0.2), {
+            TextColor3       = hubVisible and Color3.fromRGB(200, 210, 255) or Color3.fromRGB(100, 100, 140),
+            BackgroundColor3 = hubVisible and Color3.fromRGB(14, 14, 24)    or Color3.fromRGB(8, 8, 16),
+        }):Play()
+        TweenService:Create(Ring, TweenInfo.new(0.2), {
+            BackgroundColor3 = hubVisible and Color3.fromRGB(80, 100, 255) or Color3.fromRGB(40, 40, 80),
+        }):Play()
+        RingGrad.Color = hubVisible
+            and ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 130, 255)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 60, 255)),
+            })
+            or ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 80)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 40, 80)),
+            })
+    end
 
+    -- Tap the N button → toggle hub then update visuals
     local function toggleHub()
-        local rayfieldGui = playerGui:FindFirstChild("Rayfield")
-        if rayfieldGui then
-            hubVisible        = not hubVisible
-            rayfieldGui.Enabled = hubVisible
-            -- Visual feedback: dim the N button when hub is hidden
-            TweenService:Create(Btn, TweenInfo.new(0.2), {
-                TextColor3       = hubVisible and Color3.fromRGB(200, 210, 255) or Color3.fromRGB(100, 100, 140),
-                BackgroundColor3 = hubVisible and Color3.fromRGB(14, 14, 24)    or Color3.fromRGB(8, 8, 16),
-            }):Play()
-            TweenService:Create(Ring, TweenInfo.new(0.2), {
-                BackgroundColor3 = hubVisible and Color3.fromRGB(80, 100, 255) or Color3.fromRGB(40, 40, 80),
-            }):Play()
-            RingGrad.Color = hubVisible
-                and ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 130, 255)),
-                    ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 60, 255)),
-                })
-                or ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 80)),
-                    ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 40, 80)),
-                })
-        end
+        if hubKilled then return end
+        toggleRayfieldUI()   -- uses global (checks PlayerGui + CoreGui)
+        updateBtnVisual()
     end
 
     -- Use UserInputService for smooth global tracking during drag
