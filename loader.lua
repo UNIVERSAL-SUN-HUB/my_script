@@ -89,10 +89,6 @@ local SCRIPTS = {
         code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/WhiteX1208/Scripts/refs/heads/main/HopScript.luau\"))()",
     },
     [20] = {
-        display = "inf jump",
-        code = "local InfiniteJumpEnabled = true\ngame:GetService(\"UserInputService\").JumpRequest:connect(function()\n\tif InfiniteJumpEnabled then\n\t\tgame:GetService(\"Players\").LocalPlayer.Character:FindFirstChildOfClass(\"Humanoid\"):ChangeState(\"Jumping\")\n\tend\nend)",
-    },
-    [21] = {
         display = "ink",
         code = "script_key=\"KEY_HERE\";\nloadstring(game:HttpGet(\"https://officialaxscripts.vercel.app/scripts/AX-Loader.lua\"))()",
     },
@@ -506,6 +502,7 @@ local tabDefs = {
     { name = "Home",     icon = "🏠", order = 1 },
     { name = "Script",   icon = "📜", order = 2 },
     { name = "Executor", icon = "⚙️", order = 3 },
+    { name = "Features", icon = "⭐", order = 4 },
 }
 
 for _, def in ipairs(tabDefs) do
@@ -982,6 +979,118 @@ clearBtn.Activated:Connect(function()
     codeBox.Text = ""
     outputLabel.TextColor3 = Color3.fromRGB(90, 90, 130)
     outputLabel.Text = "-- Output will appear here"
+end)
+
+-- ──────────────────────────────────────────────
+-- Features Page
+-- ──────────────────────────────────────────────
+local featPage = tabs["Features"].page
+
+-- Header
+local featHeader = Instance.new("TextLabel")
+featHeader.Size = UDim2.new(1, 0, 0, 34)
+featHeader.BackgroundColor3 = Color3.fromRGB(20, 20, 36)
+featHeader.BorderSizePixel = 0
+featHeader.Text = "⭐  Features"
+featHeader.TextColor3 = Color3.fromRGB(200, 200, 255)
+featHeader.TextSize = 13
+featHeader.Font = Enum.Font.GothamBold
+featHeader.ZIndex = 13
+featHeader.LayoutOrder = 1
+featHeader.Parent = featPage
+Instance.new("UICorner", featHeader).CornerRadius = UDim.new(0, 8)
+
+-- ── Infinite Jump card ──────────────────────────────
+local ijCard = Instance.new("Frame")
+ijCard.Size = UDim2.new(1, 0, 0, 60)
+ijCard.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
+ijCard.BorderSizePixel = 0
+ijCard.ZIndex = 13
+ijCard.LayoutOrder = 2
+ijCard.Parent = featPage
+Instance.new("UICorner", ijCard).CornerRadius = UDim.new(0, 8)
+
+local ijStroke = Instance.new("UIStroke")
+ijStroke.Color = Color3.fromRGB(55, 55, 100)
+ijStroke.Thickness = 1.2
+ijStroke.Parent = ijCard
+
+-- Label
+local ijLabel = Instance.new("TextLabel")
+ijLabel.Size = UDim2.new(1, -80, 1, 0)
+ijLabel.Position = UDim2.new(0, 12, 0, 0)
+ijLabel.BackgroundTransparency = 1
+ijLabel.Text = "🦘  Infinite Jump"
+ijLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+ijLabel.TextSize = 14
+ijLabel.Font = Enum.Font.GothamBold
+ijLabel.TextXAlignment = Enum.TextXAlignment.Left
+ijLabel.ZIndex = 14
+ijLabel.Parent = ijCard
+
+-- Sub-label
+local ijSub = Instance.new("TextLabel")
+ijSub.Size = UDim2.new(1, -80, 0, 16)
+ijSub.Position = UDim2.new(0, 12, 0, 30)
+ijSub.BackgroundTransparency = 1
+ijSub.Text = "Jump again mid-air infinitely"
+ijSub.TextColor3 = Color3.fromRGB(110, 110, 150)
+ijSub.TextSize = 11
+ijSub.Font = Enum.Font.Gotham
+ijSub.TextXAlignment = Enum.TextXAlignment.Left
+ijSub.ZIndex = 14
+ijSub.Parent = ijCard
+
+-- Toggle button
+local ijToggle = Instance.new("TextButton")
+ijToggle.Size = UDim2.new(0, 58, 0, 28)
+ijToggle.Position = UDim2.new(1, -70, 0.5, -14)
+ijToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+ijToggle.BorderSizePixel = 0
+ijToggle.Text = "OFF"
+ijToggle.TextColor3 = Color3.fromRGB(160, 160, 200)
+ijToggle.TextSize = 12
+ijToggle.Font = Enum.Font.GothamBold
+ijToggle.ZIndex = 15
+ijToggle.Parent = ijCard
+Instance.new("UICorner", ijToggle).CornerRadius = UDim.new(0, 6)
+
+-- State & connection
+local ijEnabled = false
+local ijConnection = nil
+
+local function setIJToggle(state)
+    ijEnabled = state
+    if state then
+        ijToggle.Text = "ON"
+        ijToggle.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
+        ijToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ijStroke.Color = Color3.fromRGB(40, 160, 70)
+        -- Connect infinite jump
+        ijConnection = game:GetService("UserInputService").JumpRequest:Connect(function()
+            local char = game:GetService("Players").LocalPlayer.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end
+        end)
+    else
+        ijToggle.Text = "OFF"
+        ijToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+        ijToggle.TextColor3 = Color3.fromRGB(160, 160, 200)
+        ijStroke.Color = Color3.fromRGB(55, 55, 100)
+        -- Disconnect
+        if ijConnection then
+            ijConnection:Disconnect()
+            ijConnection = nil
+        end
+    end
+end
+
+ijToggle.Activated:Connect(function()
+    setIJToggle(not ijEnabled)
 end)
 
 -- ──────────────────────────────────────────────
