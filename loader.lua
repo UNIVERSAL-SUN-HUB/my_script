@@ -1250,7 +1250,7 @@ TitleBar.InputBegan:Connect(function(input)
     end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
+local dragChangedConn = UserInputService.InputChanged:Connect(function(input)
     if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         local delta = input.Position - dragStart
         MenuFrame.Position = UDim2.new(
@@ -1260,7 +1260,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
-UserInputService.InputEnded:Connect(function(input)
+local dragEndedConn = UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = false
     end
@@ -1284,14 +1284,25 @@ hideMenu = function(showNotif)
     end
 end
 
+local keyBindConn
+
+local function destroyAll()
+    -- Disconnect all external connections
+    dragChangedConn:Disconnect()
+    dragEndedConn:Disconnect()
+    if keyBindConn then keyBindConn:Disconnect() end
+    if ijConnection then ijConnection:Disconnect() end
+    if mkKeyConn then mkKeyConn:Disconnect() end
+    -- Destroy the entire GUI
+    ScreenGui:Destroy()
+end
+
 CloseBtn.MouseButton1Click:Connect(function()
     ConfirmDialog.Visible = true
 end)
 
 DialogYes.MouseButton1Click:Connect(function()
-    ConfirmDialog.Visible = false
-    hideMenu(false)
-    hideNotification()
+    destroyAll()
 end)
 
 DialogNo.MouseButton1Click:Connect(function()
@@ -1302,7 +1313,7 @@ MinimizeBtn.MouseButton1Click:Connect(function()
     hideMenu()
 end)
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
+keyBindConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == menuKey then
         if menuOpen then
