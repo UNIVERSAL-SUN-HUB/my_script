@@ -959,15 +959,17 @@ local function runCode()
         -- Capture print output by overriding print temporarily
         local outputs = {}
         local oldPrint = print
-        getfenv and pcall(function()
-            getfenv(0).print = function(...)
-                local parts = {}
-                for _, v in ipairs({...}) do
-                    table.insert(parts, tostring(v))
+        if getfenv then
+            pcall(function()
+                getfenv(0).print = function(...)
+                    local parts = {}
+                    for _, v in ipairs({...}) do
+                        table.insert(parts, tostring(v))
+                    end
+                    table.insert(outputs, table.concat(parts, "\t"))
                 end
-                table.insert(outputs, table.concat(parts, "\t"))
-            end
-        end)
+            end)
+        end
 
         local fn, compileErr = loadstring(code)
         if not fn then
@@ -987,7 +989,9 @@ local function runCode()
         end
 
         -- Restore print
-        pcall(function() getfenv(0).print = oldPrint end)
+        if getfenv then
+            pcall(function() getfenv(0).print = oldPrint end)
+        end
 
         runBtn.Text = "▶  Run"
         runBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
