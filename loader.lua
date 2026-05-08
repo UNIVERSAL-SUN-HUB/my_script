@@ -1315,6 +1315,925 @@ rjNewBtn.Activated:Connect(function()
     task.delay(3, function() rjNewBtn.Text = "New Server" end)
 end)
 
+-- ── Speed card ──────────────────────────────
+local speedCard = Instance.new("Frame")
+speedCard.Size = UDim2.new(1, 0, 0, 70)
+speedCard.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
+speedCard.BorderSizePixel = 0
+speedCard.ZIndex = 13
+speedCard.LayoutOrder = 5
+speedCard.Parent = featPage
+Instance.new("UICorner", speedCard).CornerRadius = UDim.new(0, 8)
+
+local speedCardStroke = Instance.new("UIStroke")
+speedCardStroke.Color = Color3.fromRGB(55, 55, 100)
+speedCardStroke.Thickness = 1.2
+speedCardStroke.Parent = speedCard
+
+local speedCardLabel = Instance.new("TextLabel")
+speedCardLabel.Size = UDim2.new(0, 160, 0, 20)
+speedCardLabel.Position = UDim2.new(0, 12, 0, 8)
+speedCardLabel.BackgroundTransparency = 1
+speedCardLabel.Text = "⚡  Speed"
+speedCardLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+speedCardLabel.TextSize = 14
+speedCardLabel.Font = Enum.Font.GothamBold
+speedCardLabel.TextXAlignment = Enum.TextXAlignment.Left
+speedCardLabel.ZIndex = 14
+speedCardLabel.Parent = speedCard
+
+local speedCardSub = Instance.new("TextLabel")
+speedCardSub.Size = UDim2.new(0, 160, 0, 16)
+speedCardSub.Position = UDim2.new(0, 12, 0, 32)
+speedCardSub.BackgroundTransparency = 1
+speedCardSub.Text = "Set walk speed (default 16)"
+speedCardSub.TextColor3 = Color3.fromRGB(110, 110, 150)
+speedCardSub.TextSize = 11
+speedCardSub.Font = Enum.Font.Gotham
+speedCardSub.TextXAlignment = Enum.TextXAlignment.Left
+speedCardSub.ZIndex = 14
+speedCardSub.Parent = speedCard
+
+local speedInput = Instance.new("TextBox")
+speedInput.Size = UDim2.new(0, 110, 0, 28)
+speedInput.Position = UDim2.new(1, -122, 0.5, -14)
+speedInput.BackgroundColor3 = Color3.fromRGB(28, 28, 46)
+speedInput.BorderSizePixel = 0
+speedInput.Text = "16"
+speedInput.PlaceholderText = "Speed..."
+speedInput.PlaceholderColor3 = Color3.fromRGB(80, 80, 120)
+speedInput.TextColor3 = Color3.fromRGB(200, 200, 255)
+speedInput.TextSize = 13
+speedInput.Font = Enum.Font.GothamMedium
+speedInput.ZIndex = 15
+speedInput.Parent = speedCard
+Instance.new("UICorner", speedInput).CornerRadius = UDim.new(0, 6)
+
+local speedInputStroke = Instance.new("UIStroke")
+speedInputStroke.Color = Color3.fromRGB(60, 60, 110)
+speedInputStroke.Thickness = 1
+speedInputStroke.Parent = speedInput
+
+local currentWalkSpeed = 16
+
+local function applyWalkSpeed()
+    local char = Players.LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.WalkSpeed = currentWalkSpeed
+    end
+end
+
+speedInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        local num = tonumber(speedInput.Text)
+        if num then
+            currentWalkSpeed = math.clamp(num, 0, 500)
+            speedInput.Text = tostring(currentWalkSpeed)
+            applyWalkSpeed()
+        else
+            speedInput.Text = tostring(currentWalkSpeed)
+        end
+    end
+end)
+
+Players.LocalPlayer.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid")
+    task.wait(0.2)
+    hum.WalkSpeed = currentWalkSpeed
+end)
+
+-- ── Spin card ──────────────────────────────
+local spinCard = Instance.new("Frame")
+spinCard.Size = UDim2.new(1, 0, 0, 70)
+spinCard.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
+spinCard.BorderSizePixel = 0
+spinCard.ZIndex = 13
+spinCard.LayoutOrder = 6
+spinCard.Parent = featPage
+Instance.new("UICorner", spinCard).CornerRadius = UDim.new(0, 8)
+
+local spinCardStroke = Instance.new("UIStroke")
+spinCardStroke.Color = Color3.fromRGB(55, 55, 100)
+spinCardStroke.Thickness = 1.2
+spinCardStroke.Parent = spinCard
+
+local spinCardLabel = Instance.new("TextLabel")
+spinCardLabel.Size = UDim2.new(0, 160, 0, 20)
+spinCardLabel.Position = UDim2.new(0, 12, 0, 8)
+spinCardLabel.BackgroundTransparency = 1
+spinCardLabel.Text = "🌀  Spin"
+spinCardLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+spinCardLabel.TextSize = 14
+spinCardLabel.Font = Enum.Font.GothamBold
+spinCardLabel.TextXAlignment = Enum.TextXAlignment.Left
+spinCardLabel.ZIndex = 14
+spinCardLabel.Parent = spinCard
+
+local spinCardSub = Instance.new("TextLabel")
+spinCardSub.Size = UDim2.new(0, 160, 0, 16)
+spinCardSub.Position = UDim2.new(0, 12, 0, 32)
+spinCardSub.BackgroundTransparency = 1
+spinCardSub.Text = "Rotate your character"
+spinCardSub.TextColor3 = Color3.fromRGB(110, 110, 150)
+spinCardSub.TextSize = 11
+spinCardSub.Font = Enum.Font.Gotham
+spinCardSub.TextXAlignment = Enum.TextXAlignment.Left
+spinCardSub.ZIndex = 14
+spinCardSub.Parent = spinCard
+
+local spinInput = Instance.new("TextBox")
+spinInput.Size = UDim2.new(0, 60, 0, 28)
+spinInput.Position = UDim2.new(1, -140, 0.5, -14)
+spinInput.BackgroundColor3 = Color3.fromRGB(28, 28, 46)
+spinInput.BorderSizePixel = 0
+spinInput.Text = "20"
+spinInput.PlaceholderText = "Speed"
+spinInput.PlaceholderColor3 = Color3.fromRGB(80, 80, 120)
+spinInput.TextColor3 = Color3.fromRGB(200, 200, 255)
+spinInput.TextSize = 13
+spinInput.Font = Enum.Font.GothamMedium
+spinInput.ZIndex = 15
+spinInput.Parent = spinCard
+Instance.new("UICorner", spinInput).CornerRadius = UDim.new(0, 6)
+
+local spinInputStroke = Instance.new("UIStroke")
+spinInputStroke.Color = Color3.fromRGB(60, 60, 110)
+spinInputStroke.Thickness = 1
+spinInputStroke.Parent = spinInput
+
+local spinToggle = Instance.new("TextButton")
+spinToggle.Size = UDim2.new(0, 58, 0, 28)
+spinToggle.Position = UDim2.new(1, -70, 0.5, -14)
+spinToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+spinToggle.BorderSizePixel = 0
+spinToggle.Text = "OFF"
+spinToggle.TextColor3 = Color3.fromRGB(160, 160, 200)
+spinToggle.TextSize = 12
+spinToggle.Font = Enum.Font.GothamBold
+spinToggle.ZIndex = 15
+spinToggle.Parent = spinCard
+Instance.new("UICorner", spinToggle).CornerRadius = UDim.new(0, 6)
+
+local spinEnabled = false
+local spinSpeed = 20
+
+local function applySpin()
+    local char = Players.LocalPlayer.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    for _, v in pairs(root:GetChildren()) do
+        if v.Name == "NaitikSpin" then v:Destroy() end
+    end
+    if spinEnabled then
+        local bav = Instance.new("BodyAngularVelocity")
+        bav.Name = "NaitikSpin"
+        bav.MaxTorque = Vector3.new(0, math.huge, 0)
+        bav.AngularVelocity = Vector3.new(0, spinSpeed, 0)
+        bav.Parent = root
+    end
+end
+
+local function setSpinToggle(state)
+    spinEnabled = state
+    if state then
+        spinToggle.Text = "ON"
+        spinToggle.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
+        spinToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        spinCardStroke.Color = Color3.fromRGB(40, 160, 70)
+    else
+        spinToggle.Text = "OFF"
+        spinToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+        spinToggle.TextColor3 = Color3.fromRGB(160, 160, 200)
+        spinCardStroke.Color = Color3.fromRGB(55, 55, 100)
+    end
+    applySpin()
+end
+
+spinToggle.Activated:Connect(function()
+    setSpinToggle(not spinEnabled)
+end)
+
+spinInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        local num = tonumber(spinInput.Text)
+        if num then
+            spinSpeed = num
+            spinInput.Text = tostring(spinSpeed)
+            if spinEnabled then applySpin() end
+        else
+            spinInput.Text = tostring(spinSpeed)
+        end
+    end
+end)
+
+Players.LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.3)
+    if spinEnabled then applySpin() end
+end)
+
+-- ── Noclip card ──────────────────────────────
+local noclipCard = Instance.new("Frame")
+noclipCard.Size = UDim2.new(1, 0, 0, 60)
+noclipCard.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
+noclipCard.BorderSizePixel = 0
+noclipCard.ZIndex = 13
+noclipCard.LayoutOrder = 7
+noclipCard.Parent = featPage
+Instance.new("UICorner", noclipCard).CornerRadius = UDim.new(0, 8)
+
+local noclipCardStroke = Instance.new("UIStroke")
+noclipCardStroke.Color = Color3.fromRGB(55, 55, 100)
+noclipCardStroke.Thickness = 1.2
+noclipCardStroke.Parent = noclipCard
+
+local noclipCardLabel = Instance.new("TextLabel")
+noclipCardLabel.Size = UDim2.new(1, -80, 1, 0)
+noclipCardLabel.Position = UDim2.new(0, 12, 0, 0)
+noclipCardLabel.BackgroundTransparency = 1
+noclipCardLabel.Text = "👻  Noclip"
+noclipCardLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+noclipCardLabel.TextSize = 14
+noclipCardLabel.Font = Enum.Font.GothamBold
+noclipCardLabel.TextXAlignment = Enum.TextXAlignment.Left
+noclipCardLabel.ZIndex = 14
+noclipCardLabel.Parent = noclipCard
+
+local noclipCardSub = Instance.new("TextLabel")
+noclipCardSub.Size = UDim2.new(1, -80, 0, 16)
+noclipCardSub.Position = UDim2.new(0, 12, 0, 30)
+noclipCardSub.BackgroundTransparency = 1
+noclipCardSub.Text = "Walk through walls"
+noclipCardSub.TextColor3 = Color3.fromRGB(110, 110, 150)
+noclipCardSub.TextSize = 11
+noclipCardSub.Font = Enum.Font.Gotham
+noclipCardSub.TextXAlignment = Enum.TextXAlignment.Left
+noclipCardSub.ZIndex = 14
+noclipCardSub.Parent = noclipCard
+
+local noclipToggle = Instance.new("TextButton")
+noclipToggle.Size = UDim2.new(0, 58, 0, 28)
+noclipToggle.Position = UDim2.new(1, -70, 0.5, -14)
+noclipToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+noclipToggle.BorderSizePixel = 0
+noclipToggle.Text = "OFF"
+noclipToggle.TextColor3 = Color3.fromRGB(160, 160, 200)
+noclipToggle.TextSize = 12
+noclipToggle.Font = Enum.Font.GothamBold
+noclipToggle.ZIndex = 15
+noclipToggle.Parent = noclipCard
+Instance.new("UICorner", noclipToggle).CornerRadius = UDim.new(0, 6)
+
+local noclipEnabled = false
+local noclipConn = nil
+local noclipClip = true
+
+local function startNoclip()
+    noclipClip = false
+    task.wait(0.1)
+    noclipConn = game:GetService("RunService").Stepped:Connect(function()
+        if not noclipClip and Players.LocalPlayer.Character then
+            for _, child in pairs(Players.LocalPlayer.Character:GetDescendants()) do
+                if child:IsA("BasePart") and child.CanCollide then
+                    child.CanCollide = false
+                end
+            end
+        end
+    end)
+end
+
+local function stopNoclip()
+    if noclipConn then noclipConn:Disconnect() noclipConn = nil end
+    noclipClip = true
+end
+
+local function setNoclipToggle(state)
+    noclipEnabled = state
+    if state then
+        noclipToggle.Text = "ON"
+        noclipToggle.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
+        noclipToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        noclipCardStroke.Color = Color3.fromRGB(40, 160, 70)
+        startNoclip()
+    else
+        noclipToggle.Text = "OFF"
+        noclipToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+        noclipToggle.TextColor3 = Color3.fromRGB(160, 160, 200)
+        noclipCardStroke.Color = Color3.fromRGB(55, 55, 100)
+        stopNoclip()
+    end
+end
+
+noclipToggle.Activated:Connect(function()
+    setNoclipToggle(not noclipEnabled)
+end)
+
+Players.LocalPlayer.CharacterAdded:Connect(function()
+    if noclipEnabled then startNoclip() end
+end)
+
+-- ── Fly card ──────────────────────────────
+local flyCard = Instance.new("Frame")
+flyCard.Size = UDim2.new(1, 0, 0, 70)
+flyCard.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
+flyCard.BorderSizePixel = 0
+flyCard.ZIndex = 13
+flyCard.LayoutOrder = 8
+flyCard.Parent = featPage
+Instance.new("UICorner", flyCard).CornerRadius = UDim.new(0, 8)
+
+local flyCardStroke = Instance.new("UIStroke")
+flyCardStroke.Color = Color3.fromRGB(55, 55, 100)
+flyCardStroke.Thickness = 1.2
+flyCardStroke.Parent = flyCard
+
+local flyCardLabel = Instance.new("TextLabel")
+flyCardLabel.Size = UDim2.new(0, 160, 0, 20)
+flyCardLabel.Position = UDim2.new(0, 12, 0, 8)
+flyCardLabel.BackgroundTransparency = 1
+flyCardLabel.Text = "🚀  Fly"
+flyCardLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+flyCardLabel.TextSize = 14
+flyCardLabel.Font = Enum.Font.GothamBold
+flyCardLabel.TextXAlignment = Enum.TextXAlignment.Left
+flyCardLabel.ZIndex = 14
+flyCardLabel.Parent = flyCard
+
+local flyCardSub = Instance.new("TextLabel")
+flyCardSub.Size = UDim2.new(0, 160, 0, 16)
+flyCardSub.Position = UDim2.new(0, 12, 0, 32)
+flyCardSub.BackgroundTransparency = 1
+flyCardSub.Text = "WASD to move · Q/E up/down"
+flyCardSub.TextColor3 = Color3.fromRGB(110, 110, 150)
+flyCardSub.TextSize = 11
+flyCardSub.Font = Enum.Font.Gotham
+flyCardSub.TextXAlignment = Enum.TextXAlignment.Left
+flyCardSub.ZIndex = 14
+flyCardSub.Parent = flyCard
+
+local flyInput = Instance.new("TextBox")
+flyInput.Size = UDim2.new(0, 60, 0, 28)
+flyInput.Position = UDim2.new(1, -140, 0.5, -14)
+flyInput.BackgroundColor3 = Color3.fromRGB(28, 28, 46)
+flyInput.BorderSizePixel = 0
+flyInput.Text = "50"
+flyInput.PlaceholderText = "Speed"
+flyInput.PlaceholderColor3 = Color3.fromRGB(80, 80, 120)
+flyInput.TextColor3 = Color3.fromRGB(200, 200, 255)
+flyInput.TextSize = 13
+flyInput.Font = Enum.Font.GothamMedium
+flyInput.ZIndex = 15
+flyInput.Parent = flyCard
+Instance.new("UICorner", flyInput).CornerRadius = UDim.new(0, 6)
+
+local flyInputStroke = Instance.new("UIStroke")
+flyInputStroke.Color = Color3.fromRGB(60, 60, 110)
+flyInputStroke.Thickness = 1
+flyInputStroke.Parent = flyInput
+
+local flyToggle = Instance.new("TextButton")
+flyToggle.Size = UDim2.new(0, 58, 0, 28)
+flyToggle.Position = UDim2.new(1, -70, 0.5, -14)
+flyToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+flyToggle.BorderSizePixel = 0
+flyToggle.Text = "OFF"
+flyToggle.TextColor3 = Color3.fromRGB(160, 160, 200)
+flyToggle.TextSize = 12
+flyToggle.Font = Enum.Font.GothamBold
+flyToggle.ZIndex = 15
+flyToggle.Parent = flyCard
+Instance.new("UICorner", flyToggle).CornerRadius = UDim.new(0, 6)
+
+local FLYING = false
+local FLY_CONTROL = {F=0,B=0,L=0,R=0,Q=0,E=0}
+local FLY_LCONTROL = {F=0,B=0,L=0,R=0,Q=0,E=0}
+local FLY_SPEED = 0
+local flySpeed = 50
+local flyHumanoid, flyRoot
+local flyEnabled = false
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.W then FLY_CONTROL.F = 1 end
+    if input.KeyCode == Enum.KeyCode.S then FLY_CONTROL.B = -1 end
+    if input.KeyCode == Enum.KeyCode.A then FLY_CONTROL.L = -1 end
+    if input.KeyCode == Enum.KeyCode.D then FLY_CONTROL.R = 1 end
+    if input.KeyCode == Enum.KeyCode.E then FLY_CONTROL.Q = 1 end
+    if input.KeyCode == Enum.KeyCode.Q then FLY_CONTROL.E = -1 end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.W then FLY_CONTROL.F = 0 end
+    if input.KeyCode == Enum.KeyCode.S then FLY_CONTROL.B = 0 end
+    if input.KeyCode == Enum.KeyCode.A then FLY_CONTROL.L = 0 end
+    if input.KeyCode == Enum.KeyCode.D then FLY_CONTROL.R = 0 end
+    if input.KeyCode == Enum.KeyCode.E then FLY_CONTROL.Q = 0 end
+    if input.KeyCode == Enum.KeyCode.Q then FLY_CONTROL.E = 0 end
+end)
+
+local function startFly()
+    FLYING = true
+    local BG = Instance.new("BodyGyro")
+    local BV = Instance.new("BodyVelocity")
+    BG.P = 9e4
+    BG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    BG.CFrame = flyRoot.CFrame
+    BG.Parent = flyRoot
+    BV.Velocity = Vector3.new(0,0,0)
+    BV.MaxForce = Vector3.new(9e9,9e9,9e9)
+    BV.Parent = flyRoot
+    task.spawn(function()
+        repeat task.wait()
+            local camera = workspace.CurrentCamera
+            if flyHumanoid then flyHumanoid.PlatformStand = true end
+            if FLY_CONTROL.L+FLY_CONTROL.R ~= 0 or FLY_CONTROL.F+FLY_CONTROL.B ~= 0 or FLY_CONTROL.Q+FLY_CONTROL.E ~= 0 then
+                FLY_SPEED = flySpeed
+            elseif FLY_SPEED ~= 0 then
+                FLY_SPEED = 0
+            end
+            if (FLY_CONTROL.L+FLY_CONTROL.R) ~= 0 or (FLY_CONTROL.F+FLY_CONTROL.B) ~= 0 or (FLY_CONTROL.Q+FLY_CONTROL.E) ~= 0 then
+                BV.Velocity = ((camera.CFrame.LookVector*(FLY_CONTROL.F+FLY_CONTROL.B)) + ((camera.CFrame*CFrame.new(FLY_CONTROL.L+FLY_CONTROL.R,(FLY_CONTROL.F+FLY_CONTROL.B+FLY_CONTROL.Q+FLY_CONTROL.E)*0.2,0).p) - camera.CFrame.p)) * FLY_SPEED
+                FLY_LCONTROL = {F=FLY_CONTROL.F,B=FLY_CONTROL.B,L=FLY_CONTROL.L,R=FLY_CONTROL.R}
+            elseif FLY_SPEED ~= 0 then
+                BV.Velocity = ((camera.CFrame.LookVector*(FLY_LCONTROL.F+FLY_LCONTROL.B)) + ((camera.CFrame*CFrame.new(FLY_LCONTROL.L+FLY_LCONTROL.R,(FLY_LCONTROL.F+FLY_LCONTROL.B+FLY_CONTROL.Q+FLY_CONTROL.E)*0.2,0).p) - camera.CFrame.p)) * FLY_SPEED
+            else
+                BV.Velocity = Vector3.new(0,0,0)
+            end
+            BG.CFrame = camera.CFrame
+        until not FLYING
+        FLY_CONTROL = {F=0,B=0,L=0,R=0,Q=0,E=0}
+        FLY_LCONTROL = {F=0,B=0,L=0,R=0,Q=0,E=0}
+        FLY_SPEED = 0
+        BG:Destroy()
+        BV:Destroy()
+        if flyHumanoid then flyHumanoid.PlatformStand = false end
+    end)
+end
+
+local function stopFly()
+    FLYING = false
+end
+
+local function setFlyToggle(state)
+    flyEnabled = state
+    if state then
+        flyToggle.Text = "ON"
+        flyToggle.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
+        flyToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        flyCardStroke.Color = Color3.fromRGB(40, 160, 70)
+        local char = Players.LocalPlayer.Character
+        if char then
+            flyHumanoid = char:FindFirstChildOfClass("Humanoid")
+            flyRoot = char:FindFirstChild("HumanoidRootPart")
+            if flyHumanoid and flyRoot then startFly() end
+        end
+    else
+        flyToggle.Text = "OFF"
+        flyToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+        flyToggle.TextColor3 = Color3.fromRGB(160, 160, 200)
+        flyCardStroke.Color = Color3.fromRGB(55, 55, 100)
+        stopFly()
+    end
+end
+
+flyToggle.Activated:Connect(function()
+    setFlyToggle(not flyEnabled)
+end)
+
+flyInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        local num = tonumber(flyInput.Text)
+        if num then
+            flySpeed = math.clamp(num, 0, 500)
+            flyInput.Text = tostring(flySpeed)
+        else
+            flyInput.Text = tostring(flySpeed)
+        end
+    end
+end)
+
+Players.LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.3)
+    if flyEnabled then
+        flyHumanoid = char:FindFirstChildOfClass("Humanoid")
+        flyRoot = char:FindFirstChild("HumanoidRootPart")
+        if flyHumanoid and flyRoot then startFly() end
+    end
+end)
+
+-- ── ESP card ──────────────────────────────
+local espCard = Instance.new("Frame")
+espCard.Size = UDim2.new(1, 0, 0, 60)
+espCard.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
+espCard.BorderSizePixel = 0
+espCard.ZIndex = 13
+espCard.LayoutOrder = 9
+espCard.Parent = featPage
+Instance.new("UICorner", espCard).CornerRadius = UDim.new(0, 8)
+
+local espCardStroke = Instance.new("UIStroke")
+espCardStroke.Color = Color3.fromRGB(55, 55, 100)
+espCardStroke.Thickness = 1.2
+espCardStroke.Parent = espCard
+
+local espCardLabel = Instance.new("TextLabel")
+espCardLabel.Size = UDim2.new(1, -80, 1, 0)
+espCardLabel.Position = UDim2.new(0, 12, 0, 0)
+espCardLabel.BackgroundTransparency = 1
+espCardLabel.Text = "👁  ESP"
+espCardLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+espCardLabel.TextSize = 14
+espCardLabel.Font = Enum.Font.GothamBold
+espCardLabel.TextXAlignment = Enum.TextXAlignment.Left
+espCardLabel.ZIndex = 14
+espCardLabel.Parent = espCard
+
+local espCardSub = Instance.new("TextLabel")
+espCardSub.Size = UDim2.new(1, -80, 0, 16)
+espCardSub.Position = UDim2.new(0, 12, 0, 30)
+espCardSub.BackgroundTransparency = 1
+espCardSub.Text = "Highlight players through walls"
+espCardSub.TextColor3 = Color3.fromRGB(110, 110, 150)
+espCardSub.TextSize = 11
+espCardSub.Font = Enum.Font.Gotham
+espCardSub.TextXAlignment = Enum.TextXAlignment.Left
+espCardSub.ZIndex = 14
+espCardSub.Parent = espCard
+
+local espToggle = Instance.new("TextButton")
+espToggle.Size = UDim2.new(0, 58, 0, 28)
+espToggle.Position = UDim2.new(1, -70, 0.5, -14)
+espToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+espToggle.BorderSizePixel = 0
+espToggle.Text = "OFF"
+espToggle.TextColor3 = Color3.fromRGB(160, 160, 200)
+espToggle.TextSize = 12
+espToggle.Font = Enum.Font.GothamBold
+espToggle.ZIndex = 15
+espToggle.Parent = espCard
+Instance.new("UICorner", espToggle).CornerRadius = UDim.new(0, 6)
+
+local espEnabled = false
+local espObjects = {}
+
+local function createESP(plr)
+    if plr == Players.LocalPlayer then return end
+    local function apply(char)
+        if not espEnabled then return end
+        local head = char:FindFirstChild("Head")
+        if not head then return end
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "NaitikESP"
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+        highlight.Parent = char
+        local bill = Instance.new("BillboardGui")
+        bill.Name = "NaitikESPBill"
+        bill.Size = UDim2.new(0, 100, 0, 20)
+        bill.StudsOffset = Vector3.new(0, 2, 0)
+        bill.AlwaysOnTop = true
+        bill.Parent = head
+        local nameText = Instance.new("TextLabel")
+        nameText.Size = UDim2.new(1, 0, 1, 0)
+        nameText.BackgroundTransparency = 1
+        nameText.Text = plr.Name
+        nameText.TextColor3 = Color3.fromRGB(255, 0, 0)
+        nameText.TextStrokeTransparency = 0
+        nameText.Font = Enum.Font.GothamBold
+        nameText.TextScaled = true
+        nameText.Parent = bill
+        espObjects[plr] = {highlight, bill}
+    end
+    if plr.Character then apply(plr.Character) end
+    plr.CharacterAdded:Connect(apply)
+end
+
+local function enableESP()
+    for _, plr in pairs(Players:GetPlayers()) do createESP(plr) end
+end
+
+local function disableESP()
+    for _, objs in pairs(espObjects) do
+        for _, obj in pairs(objs) do
+            if obj and obj.Parent then obj:Destroy() end
+        end
+    end
+    espObjects = {}
+end
+
+local function setESPToggle(state)
+    espEnabled = state
+    if state then
+        espToggle.Text = "ON"
+        espToggle.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
+        espToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        espCardStroke.Color = Color3.fromRGB(40, 160, 70)
+        enableESP()
+    else
+        espToggle.Text = "OFF"
+        espToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+        espToggle.TextColor3 = Color3.fromRGB(160, 160, 200)
+        espCardStroke.Color = Color3.fromRGB(55, 55, 100)
+        disableESP()
+    end
+end
+
+espToggle.Activated:Connect(function()
+    setESPToggle(not espEnabled)
+end)
+
+Players.PlayerAdded:Connect(function(plr)
+    if espEnabled then createESP(plr) end
+end)
+
+-- ── Hitbox card ──────────────────────────────
+local hitboxCard = Instance.new("Frame")
+hitboxCard.Size = UDim2.new(1, 0, 0, 70)
+hitboxCard.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
+hitboxCard.BorderSizePixel = 0
+hitboxCard.ZIndex = 13
+hitboxCard.LayoutOrder = 10
+hitboxCard.Parent = featPage
+Instance.new("UICorner", hitboxCard).CornerRadius = UDim.new(0, 8)
+
+local hitboxCardStroke = Instance.new("UIStroke")
+hitboxCardStroke.Color = Color3.fromRGB(55, 55, 100)
+hitboxCardStroke.Thickness = 1.2
+hitboxCardStroke.Parent = hitboxCard
+
+local hitboxCardLabel = Instance.new("TextLabel")
+hitboxCardLabel.Size = UDim2.new(0, 160, 0, 20)
+hitboxCardLabel.Position = UDim2.new(0, 12, 0, 8)
+hitboxCardLabel.BackgroundTransparency = 1
+hitboxCardLabel.Text = "📦  Hitbox"
+hitboxCardLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+hitboxCardLabel.TextSize = 14
+hitboxCardLabel.Font = Enum.Font.GothamBold
+hitboxCardLabel.TextXAlignment = Enum.TextXAlignment.Left
+hitboxCardLabel.ZIndex = 14
+hitboxCardLabel.Parent = hitboxCard
+
+local hitboxCardSub = Instance.new("TextLabel")
+hitboxCardSub.Size = UDim2.new(0, 160, 0, 16)
+hitboxCardSub.Position = UDim2.new(0, 12, 0, 32)
+hitboxCardSub.BackgroundTransparency = 1
+hitboxCardSub.Text = "Expand enemy hitboxes"
+hitboxCardSub.TextColor3 = Color3.fromRGB(110, 110, 150)
+hitboxCardSub.TextSize = 11
+hitboxCardSub.Font = Enum.Font.Gotham
+hitboxCardSub.TextXAlignment = Enum.TextXAlignment.Left
+hitboxCardSub.ZIndex = 14
+hitboxCardSub.Parent = hitboxCard
+
+local hitboxInput = Instance.new("TextBox")
+hitboxInput.Size = UDim2.new(0, 60, 0, 28)
+hitboxInput.Position = UDim2.new(1, -140, 0.5, -14)
+hitboxInput.BackgroundColor3 = Color3.fromRGB(28, 28, 46)
+hitboxInput.BorderSizePixel = 0
+hitboxInput.Text = "5"
+hitboxInput.PlaceholderText = "Size"
+hitboxInput.PlaceholderColor3 = Color3.fromRGB(80, 80, 120)
+hitboxInput.TextColor3 = Color3.fromRGB(200, 200, 255)
+hitboxInput.TextSize = 13
+hitboxInput.Font = Enum.Font.GothamMedium
+hitboxInput.ZIndex = 15
+hitboxInput.Parent = hitboxCard
+Instance.new("UICorner", hitboxInput).CornerRadius = UDim.new(0, 6)
+
+local hitboxInputStroke = Instance.new("UIStroke")
+hitboxInputStroke.Color = Color3.fromRGB(60, 60, 110)
+hitboxInputStroke.Thickness = 1
+hitboxInputStroke.Parent = hitboxInput
+
+local hitboxToggle = Instance.new("TextButton")
+hitboxToggle.Size = UDim2.new(0, 58, 0, 28)
+hitboxToggle.Position = UDim2.new(1, -70, 0.5, -14)
+hitboxToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+hitboxToggle.BorderSizePixel = 0
+hitboxToggle.Text = "OFF"
+hitboxToggle.TextColor3 = Color3.fromRGB(160, 160, 200)
+hitboxToggle.TextSize = 12
+hitboxToggle.Font = Enum.Font.GothamBold
+hitboxToggle.ZIndex = 15
+hitboxToggle.Parent = hitboxCard
+Instance.new("UICorner", hitboxToggle).CornerRadius = UDim.new(0, 6)
+
+local hitboxEnabled = false
+local hitboxSize = 5
+
+local function applyHitbox(plr)
+    if plr == Players.LocalPlayer then return end
+    if not hitboxEnabled then return end
+    local char = plr.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if root and root:IsA("BasePart") then
+        root.CanCollide = false
+        root.Size = hitboxSize == 1 and Vector3.new(2,1,1) or Vector3.new(hitboxSize,hitboxSize,hitboxSize)
+        root.Transparency = 0.4
+    end
+end
+
+local function resetHitbox(plr)
+    if plr == Players.LocalPlayer then return end
+    local char = plr.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if root then
+        root.Size = Vector3.new(2, 2, 1)
+        root.Transparency = 1
+        root.CanCollide = true
+    end
+end
+
+local function applyAllHitboxes()
+    for _, plr in pairs(Players:GetPlayers()) do applyHitbox(plr) end
+end
+
+local function resetAllHitboxes()
+    for _, plr in pairs(Players:GetPlayers()) do resetHitbox(plr) end
+end
+
+local function setHitboxToggle(state)
+    hitboxEnabled = state
+    if state then
+        hitboxToggle.Text = "ON"
+        hitboxToggle.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
+        hitboxToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        hitboxCardStroke.Color = Color3.fromRGB(40, 160, 70)
+        applyAllHitboxes()
+    else
+        hitboxToggle.Text = "OFF"
+        hitboxToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+        hitboxToggle.TextColor3 = Color3.fromRGB(160, 160, 200)
+        hitboxCardStroke.Color = Color3.fromRGB(55, 55, 100)
+        resetAllHitboxes()
+    end
+end
+
+hitboxToggle.Activated:Connect(function()
+    setHitboxToggle(not hitboxEnabled)
+end)
+
+hitboxInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        local num = tonumber(hitboxInput.Text)
+        if num then
+            hitboxSize = math.clamp(num, 1, 50)
+            hitboxInput.Text = tostring(hitboxSize)
+            if hitboxEnabled then applyAllHitboxes() end
+        else
+            hitboxInput.Text = tostring(hitboxSize)
+        end
+    end
+end)
+
+Players.PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(function()
+        task.wait(0.3)
+        if hitboxEnabled then applyHitbox(plr) end
+    end)
+end)
+
+for _, plr in pairs(Players:GetPlayers()) do
+    plr.CharacterAdded:Connect(function()
+        task.wait(0.3)
+        if hitboxEnabled then applyHitbox(plr) end
+    end)
+end
+
+-- ── WalkFling card ──────────────────────────────
+local flingCard = Instance.new("Frame")
+flingCard.Size = UDim2.new(1, 0, 0, 60)
+flingCard.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
+flingCard.BorderSizePixel = 0
+flingCard.ZIndex = 13
+flingCard.LayoutOrder = 11
+flingCard.Parent = featPage
+Instance.new("UICorner", flingCard).CornerRadius = UDim.new(0, 8)
+
+local flingCardStroke = Instance.new("UIStroke")
+flingCardStroke.Color = Color3.fromRGB(55, 55, 100)
+flingCardStroke.Thickness = 1.2
+flingCardStroke.Parent = flingCard
+
+local flingCardLabel = Instance.new("TextLabel")
+flingCardLabel.Size = UDim2.new(1, -80, 1, 0)
+flingCardLabel.Position = UDim2.new(0, 12, 0, 0)
+flingCardLabel.BackgroundTransparency = 1
+flingCardLabel.Text = "💥  WalkFling"
+flingCardLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+flingCardLabel.TextSize = 14
+flingCardLabel.Font = Enum.Font.GothamBold
+flingCardLabel.TextXAlignment = Enum.TextXAlignment.Left
+flingCardLabel.ZIndex = 14
+flingCardLabel.Parent = flingCard
+
+local flingCardSub = Instance.new("TextLabel")
+flingCardSub.Size = UDim2.new(1, -80, 0, 16)
+flingCardSub.Position = UDim2.new(0, 12, 0, 30)
+flingCardSub.BackgroundTransparency = 1
+flingCardSub.Text = "Fling nearby players while walking"
+flingCardSub.TextColor3 = Color3.fromRGB(110, 110, 150)
+flingCardSub.TextSize = 11
+flingCardSub.Font = Enum.Font.Gotham
+flingCardSub.TextXAlignment = Enum.TextXAlignment.Left
+flingCardSub.ZIndex = 14
+flingCardSub.Parent = flingCard
+
+local flingToggle = Instance.new("TextButton")
+flingToggle.Size = UDim2.new(0, 58, 0, 28)
+flingToggle.Position = UDim2.new(1, -70, 0.5, -14)
+flingToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+flingToggle.BorderSizePixel = 0
+flingToggle.Text = "OFF"
+flingToggle.TextColor3 = Color3.fromRGB(160, 160, 200)
+flingToggle.TextSize = 12
+flingToggle.Font = Enum.Font.GothamBold
+flingToggle.ZIndex = 15
+flingToggle.Parent = flingCard
+Instance.new("UICorner", flingToggle).CornerRadius = UDim.new(0, 6)
+
+local walkflinging = false
+local flingDiedConn = nil
+
+local function getFlingRoot()
+    local char = Players.LocalPlayer.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function startWalkFling()
+    if walkflinging then return end
+    walkflinging = true
+    local char = Players.LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildWhichIsA("Humanoid")
+    if hum then
+        flingDiedConn = hum.Died:Connect(function()
+            walkflinging = false
+        end)
+    end
+    task.spawn(function()
+        local movel = 0.1
+        while walkflinging do
+            game:GetService("RunService").Heartbeat:Wait()
+            char = Players.LocalPlayer.Character
+            local root = getFlingRoot()
+            while not (char and char.Parent and root and root.Parent) do
+                game:GetService("RunService").Heartbeat:Wait()
+                char = Players.LocalPlayer.Character
+                root = getFlingRoot()
+                if not walkflinging then return end
+            end
+            local vel = root.Velocity
+            root.Velocity = vel * 10000 + Vector3.new(0, 10000, 0)
+            game:GetService("RunService").RenderStepped:Wait()
+            if char and char.Parent and root and root.Parent then
+                root.Velocity = vel
+            end
+            game:GetService("RunService").Stepped:Wait()
+            if char and char.Parent and root and root.Parent then
+                root.Velocity = vel + Vector3.new(0, movel, 0)
+                movel = -movel
+            end
+        end
+    end)
+end
+
+local function stopWalkFling()
+    walkflinging = false
+    if flingDiedConn then flingDiedConn:Disconnect() flingDiedConn = nil end
+end
+
+local function setFlingToggle(state)
+    if state then
+        flingToggle.Text = "ON"
+        flingToggle.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
+        flingToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        flingCardStroke.Color = Color3.fromRGB(40, 160, 70)
+        startWalkFling()
+    else
+        flingToggle.Text = "OFF"
+        flingToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+        flingToggle.TextColor3 = Color3.fromRGB(160, 160, 200)
+        flingCardStroke.Color = Color3.fromRGB(55, 55, 100)
+        stopWalkFling()
+    end
+end
+
+flingToggle.Activated:Connect(function()
+    setFlingToggle(not walkflinging)
+end)
+
+Players.LocalPlayer.CharacterAdded:Connect(function()
+    if walkflinging then
+        task.wait(1)
+        startWalkFling()
+    end
+end)
+
 -- ──────────────────────────────────────────────
 -- Default Tab
 -- ──────────────────────────────────────────────
