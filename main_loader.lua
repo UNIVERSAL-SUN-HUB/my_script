@@ -214,18 +214,42 @@ local function runLoadSequence()
     task.wait(0.3)
 
     -- Actual fetch happens here
-    local ok, err = pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/naitikthakur8273-alt/my_script/refs/heads/main/loader.lua"))()
+    local rawCode = nil
+    local fetchOk, fetchErr = pcall(function()
+        rawCode = game:HttpGet("https://raw.githubusercontent.com/naitikthakur8273-alt/my_script/refs/heads/main/loader.lua")
     end)
 
-    if not ok then
-        -- Show error on the progress box instead of crashing silently
-        setProgress(1.0, "❌  Failed to load!", tostring(err))
+    if not fetchOk or rawCode == nil or #rawCode == 0 then
+        setProgress(1.0, "❌  Failed to fetch!", tostring(fetchErr))
         ProgressStroke.Color = Color3.fromRGB(200, 50, 50)
         BarFill.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        ProgressTitle.Text = "⚠  Load Error"
+        ProgressTitle.Text = "⚠  Fetch Error"
         ProgressTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
-        warn("[main_loader] Error: " .. tostring(err))
+        warn("[main_loader] Fetch error: " .. tostring(fetchErr))
+        return
+    end
+
+    -- Compile
+    local fn, compileErr = loadstring(rawCode)
+    if not fn then
+        setProgress(1.0, "❌  Compile error!", tostring(compileErr))
+        ProgressStroke.Color = Color3.fromRGB(200, 50, 50)
+        BarFill.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        ProgressTitle.Text = "⚠  Compile Error"
+        ProgressTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
+        warn("[main_loader] Compile error: " .. tostring(compileErr))
+        return
+    end
+
+    -- Run
+    local runOk, runErr = pcall(fn)
+    if not runOk then
+        setProgress(1.0, "❌  Runtime error!", tostring(runErr))
+        ProgressStroke.Color = Color3.fromRGB(200, 50, 50)
+        BarFill.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        ProgressTitle.Text = "⚠  Runtime Error"
+        ProgressTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
+        warn("[main_loader] Runtime error: " .. tostring(runErr))
         return
     end
 
