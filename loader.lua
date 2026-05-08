@@ -956,21 +956,6 @@ local function runCode()
     outputLabel.Text = "-- Running..."
 
     task.spawn(function()
-        -- Capture print output by overriding print temporarily
-        local outputs = {}
-        local oldPrint = print
-        if getfenv then
-            pcall(function()
-                getfenv(0).print = function(...)
-                    local parts = {}
-                    for _, v in ipairs({...}) do
-                        table.insert(parts, tostring(v))
-                    end
-                    table.insert(outputs, table.concat(parts, "\t"))
-                end
-            end)
-        end
-
         local fn, compileErr = loadstring(code)
         if not fn then
             outputLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
@@ -979,18 +964,11 @@ local function runCode()
             local ok, runtimeErr = pcall(fn)
             if ok then
                 outputLabel.TextColor3 = Color3.fromRGB(100, 220, 130)
-                outputLabel.Text = #outputs > 0
-                    and table.concat(outputs, "\n")
-                    or "✅  Executed successfully"
+                outputLabel.Text = "✅  Executed successfully"
             else
                 outputLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
                 outputLabel.Text = "❌  " .. tostring(runtimeErr)
             end
-        end
-
-        -- Restore print
-        if getfenv then
-            pcall(function() getfenv(0).print = oldPrint end)
         end
 
         runBtn.Text = "▶  Run"
