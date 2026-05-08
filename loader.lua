@@ -508,6 +508,11 @@ Players.LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ──────────────────────────────────────────────
+-- Kill Script  (forward declaration — assigned after all features)
+-- ──────────────────────────────────────────────
+local killScript
+
+-- ──────────────────────────────────────────────
 -- Load Rayfield UI Library
 -- ──────────────────────────────────────────────
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
@@ -545,6 +550,14 @@ HomeTab:CreateParagraph({
         .. "• Executor tab → type & run your own Lua code\n"
         .. "• Features tab → toggle cheats and adjust values with sliders\n"
         .. "• Settings auto-save on every change",
+})
+
+HomeTab:CreateSection("Danger Zone")
+HomeTab:CreateButton({
+    Name     = "💀  Kill Script  (removes hub completely)",
+    Callback = function()
+        if killScript then killScript() end
+    end,
 })
 
 HomeTab:CreateSection("Server Tools")
@@ -810,6 +823,74 @@ FeaturesTab:CreateButton({
         Rayfield:Notify({ Title = "Reset", Content = "All settings reset to defaults.", Duration = 3 })
     end,
 })
+
+-- ──────────────────────────────────────────────
+-- Kill Script  (full cleanup — nothing survives)
+-- ──────────────────────────────────────────────
+killScript = function()
+    -- 1. Stop every feature cleanly
+    pcall(function() setIJToggle(false) end)
+    pcall(function() setSpeedToggle(false) end)
+    pcall(function() setSpinToggle(false) end)
+    pcall(function() setNoclipToggle(false) end)
+    pcall(function() setFlyToggle(false) end)
+    pcall(function() setESPToggle(false) end)
+    pcall(function() setHitboxToggle(false) end)
+    pcall(function() setFlingToggle(false) end)
+
+    -- 2. Hard-restore the local character to a clean state
+    pcall(function()
+        local char = Players.LocalPlayer.Character
+        if not char then return end
+        -- Reset walk speed
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed   = 16
+            hum.JumpPower   = 50
+            hum.PlatformStand = false
+        end
+        -- Kill any leftover motor objects (BodyGyro, BodyVelocity, BodyAngularVelocity)
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if root then
+            for _, obj in pairs(root:GetChildren()) do
+                if obj:IsA("BodyMover") or obj.Name == "NaitikSpin" then
+                    obj:Destroy()
+                end
+            end
+        end
+        -- Restore CanCollide on all parts
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end)
+
+    -- 3. Remove all ESP objects from other characters
+    pcall(function()
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= Players.LocalPlayer and plr.Character then
+                for _, obj in pairs(plr.Character:GetDescendants()) do
+                    if obj.Name == "NaitikESP" or obj.Name == "NaitikESPBill" then
+                        obj:Destroy()
+                    end
+                end
+            end
+        end
+    end)
+
+    -- 4. Destroy the floating N button
+    pcall(function()
+        local nb = player:WaitForChild("PlayerGui"):FindFirstChild("NaitikFloatBtn")
+        if nb then nb:Destroy() end
+    end)
+
+    -- 5. Destroy the Rayfield GUI last (this removes the entire hub window)
+    pcall(function()
+        local rg = player:WaitForChild("PlayerGui"):FindFirstChild("Rayfield")
+        if rg then rg:Destroy() end
+    end)
+end
 
 -- ──────────────────────────────────────────────
 -- Auto re-execute on teleport
