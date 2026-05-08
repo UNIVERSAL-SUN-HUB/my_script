@@ -9,6 +9,47 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- ──────────────────────────────────────────────
+-- Settings  (saved to file, loaded on startup)
+-- ──────────────────────────────────────────────
+local SETTINGS_FILE = "naitik_hub_settings.txt"
+
+local settings = {
+    menuKey   = "LeftControl",
+    ijEnabled = false,
+}
+
+local function saveSettings()
+    local lines = {
+        "menuKey="   .. settings.menuKey,
+        "ijEnabled=" .. tostring(settings.ijEnabled),
+    }
+    pcall(function() writefile(SETTINGS_FILE, table.concat(lines, "\n")) end)
+end
+
+pcall(function()
+    if isfile(SETTINGS_FILE) then
+        for key, val in readfile(SETTINGS_FILE):gmatch("([%w]+)=([^\n]+)") do
+            if key == "menuKey" then
+                settings.menuKey = val
+            elseif key == "ijEnabled" then
+                settings.ijEnabled = (val == "true")
+            end
+        end
+    end
+end)
+
+local menuKey = Enum.KeyCode[settings.menuKey] or Enum.KeyCode.LeftControl
+
+local function getKeyName(kc)
+    local pretty = {
+        LeftControl = "LControl", RightControl = "RControl",
+        LeftShift   = "LShift",   RightShift   = "RShift",
+        LeftAlt     = "LAlt",     RightAlt     = "RAlt",
+    }
+    return pretty[kc.Name] or kc.Name
+end
+
+-- ──────────────────────────────────────────────
 -- Embedded Scripts
 -- ──────────────────────────────────────────────
 local SCRIPTS = {
@@ -163,7 +204,7 @@ NotifStroke.Parent = Notification
 local NotifLabel = Instance.new("TextButton")
 NotifLabel.Size = UDim2.new(1, 0, 1, 0)
 NotifLabel.BackgroundTransparency = 1
-NotifLabel.Text = "🔑  Tap here or LControl to open"
+NotifLabel.Text = "🔑  Tap here or " .. getKeyName(menuKey) .. " to open"
 NotifLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
 NotifLabel.TextSize = 14
 NotifLabel.Font = Enum.Font.GothamMedium
@@ -547,7 +588,7 @@ local homeDesc = Instance.new("TextLabel")
 homeDesc.Size = UDim2.new(1, 0, 0, 60)
 homeDesc.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
 homeDesc.BorderSizePixel = 0
-homeDesc.Text = "Use the sidebar to navigate between tabs.\nPress LControl to hide / show this menu."
+homeDesc.Text = "Use the sidebar to navigate between tabs.\nPress " .. getKeyName(menuKey) .. " to hide / show this menu."
 homeDesc.TextColor3 = Color3.fromRGB(160, 160, 200)
 homeDesc.TextSize = 13
 homeDesc.Font = Enum.Font.Gotham
@@ -1061,6 +1102,8 @@ local ijConnection = nil
 
 local function setIJToggle(state)
     ijEnabled = state
+    settings.ijEnabled = state
+    saveSettings()
     if state then
         ijToggle.Text = "ON"
         ijToggle.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
@@ -1091,6 +1134,96 @@ end
 
 ijToggle.Activated:Connect(function()
     setIJToggle(not ijEnabled)
+end)
+
+-- Restore saved inf jump state
+if settings.ijEnabled then
+    setIJToggle(true)
+end
+
+-- ── Menu Key card ──────────────────────────────
+local mkCard = Instance.new("Frame")
+mkCard.Size = UDim2.new(1, 0, 0, 60)
+mkCard.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
+mkCard.BorderSizePixel = 0
+mkCard.ZIndex = 13
+mkCard.LayoutOrder = 3
+mkCard.Parent = featPage
+Instance.new("UICorner", mkCard).CornerRadius = UDim.new(0, 8)
+
+local mkStroke = Instance.new("UIStroke")
+mkStroke.Color = Color3.fromRGB(55, 55, 100)
+mkStroke.Thickness = 1.2
+mkStroke.Parent = mkCard
+
+local mkLabel = Instance.new("TextLabel")
+mkLabel.Size = UDim2.new(1, -90, 1, 0)
+mkLabel.Position = UDim2.new(0, 12, 0, 0)
+mkLabel.BackgroundTransparency = 1
+mkLabel.Text = "⌨️  Menu Key"
+mkLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+mkLabel.TextSize = 14
+mkLabel.Font = Enum.Font.GothamBold
+mkLabel.TextXAlignment = Enum.TextXAlignment.Left
+mkLabel.ZIndex = 14
+mkLabel.Parent = mkCard
+
+local mkSub = Instance.new("TextLabel")
+mkSub.Size = UDim2.new(1, -90, 0, 16)
+mkSub.Position = UDim2.new(0, 12, 0, 32)
+mkSub.BackgroundTransparency = 1
+mkSub.Text = "Current: " .. getKeyName(menuKey)
+mkSub.TextColor3 = Color3.fromRGB(110, 110, 150)
+mkSub.TextSize = 11
+mkSub.Font = Enum.Font.Gotham
+mkSub.TextXAlignment = Enum.TextXAlignment.Left
+mkSub.ZIndex = 14
+mkSub.Parent = mkCard
+
+local mkBtn = Instance.new("TextButton")
+mkBtn.Size = UDim2.new(0, 72, 0, 28)
+mkBtn.Position = UDim2.new(1, -82, 0.5, -14)
+mkBtn.BackgroundColor3 = Color3.fromRGB(50, 80, 160)
+mkBtn.BorderSizePixel = 0
+mkBtn.Text = "Set Key"
+mkBtn.TextColor3 = Color3.fromRGB(220, 220, 255)
+mkBtn.TextSize = 12
+mkBtn.Font = Enum.Font.GothamBold
+mkBtn.ZIndex = 15
+mkBtn.Parent = mkCard
+Instance.new("UICorner", mkBtn).CornerRadius = UDim.new(0, 6)
+
+local listeningForKey = false
+local mkKeyConn = nil
+
+mkBtn.Activated:Connect(function()
+    if listeningForKey then return end
+    listeningForKey = true
+    mkBtn.Text = "Press..."
+    mkBtn.BackgroundColor3 = Color3.fromRGB(160, 120, 20)
+    mkSub.Text = "Press any key..."
+
+    mkKeyConn = UserInputService.InputBegan:Connect(function(input, gp)
+        if gp then return end
+        if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+
+        menuKey = input.KeyCode
+        settings.menuKey = input.KeyCode.Name
+        saveSettings()
+
+        local name = getKeyName(menuKey)
+        mkSub.Text = "Current: " .. name
+        mkBtn.Text = "Set Key"
+        mkBtn.BackgroundColor3 = Color3.fromRGB(50, 80, 160)
+        NotifLabel.Text = "🔑  Tap here or " .. name .. " to open"
+        homeDesc.Text = "Use the sidebar to navigate between tabs.\nPress " .. name .. " to hide / show this menu."
+
+        listeningForKey = false
+        if mkKeyConn then
+            mkKeyConn:Disconnect()
+            mkKeyConn = nil
+        end
+    end)
 end)
 
 -- ──────────────────────────────────────────────
@@ -1162,7 +1295,7 @@ end)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.LeftControl then
+    if input.KeyCode == menuKey then
         if menuOpen then
             hideMenu()
         else
