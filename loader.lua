@@ -13,19 +13,20 @@ local player = Players.LocalPlayer
 local SETTINGS_FILE = "naitik_hub_settings.txt"
 
 local settings = {
-    menuKey       = "LeftControl",
-    ijEnabled     = false,
-    speedEnabled  = false,
-    speedVal      = 16,
-    spinEnabled   = false,
-    spinSpeedVal  = 20,
-    noclipEnabled = false,
-    flyEnabled    = false,
-    flySpeedVal   = 50,
-    espEnabled    = false,
-    hitboxEnabled = false,
-    hitboxSizeVal = 5,
-    flingEnabled  = false,
+    menuKey            = "LeftControl",
+    ijEnabled          = false,
+    speedEnabled       = false,
+    speedVal           = 16,
+    spinEnabled        = false,
+    spinSpeedVal       = 20,
+    noclipEnabled      = false,
+    flyEnabled         = false,
+    flySpeedVal        = 50,
+    espEnabled         = false,
+    hitboxEnabled      = false,
+    hitboxSizeVal      = 5,
+    flingEnabled       = false,
+    fullBrightEnabled  = false,
 }
 
 local function saveSettings()
