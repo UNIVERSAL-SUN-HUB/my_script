@@ -14,14 +14,34 @@ local playerGui = player:WaitForChild("PlayerGui")
 local SETTINGS_FILE = "naitik_hub_settings.txt"
 
 local settings = {
-    menuKey   = "LeftControl",
-    ijEnabled = false,
+    menuKey       = "LeftControl",
+    ijEnabled     = false,
+    speedVal      = 16,
+    spinEnabled   = false,
+    spinSpeedVal  = 20,
+    noclipEnabled = false,
+    flyEnabled    = false,
+    flySpeedVal   = 50,
+    espEnabled    = false,
+    hitboxEnabled = false,
+    hitboxSizeVal = 5,
+    flingEnabled  = false,
 }
 
 local function saveSettings()
     local lines = {
-        "menuKey="   .. settings.menuKey,
-        "ijEnabled=" .. tostring(settings.ijEnabled),
+        "menuKey="       .. settings.menuKey,
+        "ijEnabled="     .. tostring(settings.ijEnabled),
+        "speedVal="      .. tostring(settings.speedVal),
+        "spinEnabled="   .. tostring(settings.spinEnabled),
+        "spinSpeedVal="  .. tostring(settings.spinSpeedVal),
+        "noclipEnabled=" .. tostring(settings.noclipEnabled),
+        "flyEnabled="    .. tostring(settings.flyEnabled),
+        "flySpeedVal="   .. tostring(settings.flySpeedVal),
+        "espEnabled="    .. tostring(settings.espEnabled),
+        "hitboxEnabled=" .. tostring(settings.hitboxEnabled),
+        "hitboxSizeVal=" .. tostring(settings.hitboxSizeVal),
+        "flingEnabled="  .. tostring(settings.flingEnabled),
     }
     pcall(function() writefile(SETTINGS_FILE, table.concat(lines, "\n")) end)
 end
@@ -33,6 +53,26 @@ pcall(function()
                 settings.menuKey = val
             elseif key == "ijEnabled" then
                 settings.ijEnabled = (val == "true")
+            elseif key == "speedVal" then
+                settings.speedVal = tonumber(val) or 16
+            elseif key == "spinEnabled" then
+                settings.spinEnabled = (val == "true")
+            elseif key == "spinSpeedVal" then
+                settings.spinSpeedVal = tonumber(val) or 20
+            elseif key == "noclipEnabled" then
+                settings.noclipEnabled = (val == "true")
+            elseif key == "flyEnabled" then
+                settings.flyEnabled = (val == "true")
+            elseif key == "flySpeedVal" then
+                settings.flySpeedVal = tonumber(val) or 50
+            elseif key == "espEnabled" then
+                settings.espEnabled = (val == "true")
+            elseif key == "hitboxEnabled" then
+                settings.hitboxEnabled = (val == "true")
+            elseif key == "hitboxSizeVal" then
+                settings.hitboxSizeVal = tonumber(val) or 5
+            elseif key == "flingEnabled" then
+                settings.flingEnabled = (val == "true")
             end
         end
     end
@@ -1389,6 +1429,8 @@ speedInput.FocusLost:Connect(function(enterPressed)
         if num then
             currentWalkSpeed = math.clamp(num, 0, 500)
             speedInput.Text = tostring(currentWalkSpeed)
+            settings.speedVal = currentWalkSpeed
+            saveSettings()
             applyWalkSpeed()
         else
             speedInput.Text = tostring(currentWalkSpeed)
@@ -1496,6 +1538,8 @@ end
 
 local function setSpinToggle(state)
     spinEnabled = state
+    settings.spinEnabled = state
+    saveSettings()
     if state then
         spinToggle.Text = "ON"
         spinToggle.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
@@ -1520,6 +1564,8 @@ spinInput.FocusLost:Connect(function(enterPressed)
         if num then
             spinSpeed = num
             spinInput.Text = tostring(spinSpeed)
+            settings.spinSpeedVal = spinSpeed
+            saveSettings()
             if spinEnabled then applySpin() end
         else
             spinInput.Text = tostring(spinSpeed)
@@ -1609,6 +1655,8 @@ end
 
 local function setNoclipToggle(state)
     noclipEnabled = state
+    settings.noclipEnabled = state
+    saveSettings()
     if state then
         noclipToggle.Text = "ON"
         noclipToggle.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
@@ -1776,6 +1824,8 @@ end
 
 local function setFlyToggle(state)
     flyEnabled = state
+    settings.flyEnabled = state
+    saveSettings()
     if state then
         flyToggle.Text = "ON"
         flyToggle.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
@@ -1806,6 +1856,8 @@ flyInput.FocusLost:Connect(function(enterPressed)
         if num then
             flySpeed = math.clamp(num, 0, 500)
             flyInput.Text = tostring(flySpeed)
+            settings.flySpeedVal = flySpeed
+            saveSettings()
         else
             flyInput.Text = tostring(flySpeed)
         end
@@ -1925,6 +1977,8 @@ end
 
 local function setESPToggle(state)
     espEnabled = state
+    settings.espEnabled = state
+    saveSettings()
     if state then
         espToggle.Text = "ON"
         espToggle.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
@@ -2058,6 +2112,8 @@ end
 
 local function setHitboxToggle(state)
     hitboxEnabled = state
+    settings.hitboxEnabled = state
+    saveSettings()
     if state then
         hitboxToggle.Text = "ON"
         hitboxToggle.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
@@ -2083,6 +2139,8 @@ hitboxInput.FocusLost:Connect(function(enterPressed)
         if num then
             hitboxSize = math.clamp(num, 1, 50)
             hitboxInput.Text = tostring(hitboxSize)
+            settings.hitboxSizeVal = hitboxSize
+            saveSettings()
             if hitboxEnabled then applyAllHitboxes() end
         else
             hitboxInput.Text = tostring(hitboxSize)
@@ -2208,6 +2266,8 @@ local function stopWalkFling()
 end
 
 local function setFlingToggle(state)
+    settings.flingEnabled = state
+    saveSettings()
     if state then
         flingToggle.Text = "ON"
         flingToggle.BackgroundColor3 = Color3.fromRGB(40, 160, 70)
@@ -2233,6 +2293,29 @@ Players.LocalPlayer.CharacterAdded:Connect(function()
         startWalkFling()
     end
 end)
+
+-- ── Restore all saved feature settings on startup ──────────────────────────────
+speedInput.Text = tostring(settings.speedVal)
+currentWalkSpeed = settings.speedVal
+applyWalkSpeed()
+
+spinInput.Text = tostring(settings.spinSpeedVal)
+spinSpeed = settings.spinSpeedVal
+if settings.spinEnabled then setSpinToggle(true) end
+
+if settings.noclipEnabled then setNoclipToggle(true) end
+
+flyInput.Text = tostring(settings.flySpeedVal)
+flySpeed = settings.flySpeedVal
+if settings.flyEnabled then setFlyToggle(true) end
+
+if settings.espEnabled then setESPToggle(true) end
+
+hitboxInput.Text = tostring(settings.hitboxSizeVal)
+hitboxSize = settings.hitboxSizeVal
+if settings.hitboxEnabled then setHitboxToggle(true) end
+
+if settings.flingEnabled then setFlingToggle(true) end
 
 -- ──────────────────────────────────────────────
 -- Default Tab
