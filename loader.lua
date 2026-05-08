@@ -27,6 +27,9 @@ local settings = {
     hitboxSizeVal      = 5,
     flingEnabled       = false,
     fullBrightEnabled  = false,
+    aimbotEnabled      = false,
+    aimbotMode         = "Nearest",
+    aimbotTarget       = "",
 }
 
 local function saveSettings()
@@ -45,6 +48,9 @@ local function saveSettings()
         "hitboxSizeVal=" .. tostring(settings.hitboxSizeVal),
         "flingEnabled="       .. tostring(settings.flingEnabled),
         "fullBrightEnabled="  .. tostring(settings.fullBrightEnabled),
+        "aimbotEnabled="      .. tostring(settings.aimbotEnabled),
+        "aimbotMode="         .. settings.aimbotMode,
+        "aimbotTarget="       .. settings.aimbotTarget,
     }
     pcall(function() writefile(SETTINGS_FILE, table.concat(lines, "\n")) end)
 end
@@ -66,6 +72,9 @@ pcall(function()
             elseif key == "hitboxSizeVal" then settings.hitboxSizeVal = tonumber(val) or 5
             elseif key == "flingEnabled"      then settings.flingEnabled      = (val == "true")
             elseif key == "fullBrightEnabled" then settings.fullBrightEnabled = (val == "true")
+            elseif key == "aimbotEnabled"     then settings.aimbotEnabled     = (val == "true")
+            elseif key == "aimbotMode"        then settings.aimbotMode        = val
+            elseif key == "aimbotTarget"      then settings.aimbotTarget      = val
             end
         end
     end
@@ -572,6 +581,61 @@ if settings.fullBrightEnabled then
     setFullBrightToggle(true)
 end
 
+-- ── Aimbot ────────────────────────────────────
+local aimbotEnabled = settings.aimbotEnabled
+local aimbotMode    = settings.aimbotMode    -- "Nearest" or "Target"
+local aimbotTarget  = settings.aimbotTarget  -- player name for Target mode
+local aimbotConn    = nil
+
+local function getAimbotPlayer()
+    if aimbotMode == "Nearest" then
+        local localChar = Players.LocalPlayer.Character
+        if not localChar then return nil end
+        local localRoot = localChar:FindFirstChild("HumanoidRootPart")
+        if not localRoot then return nil end
+        local closest, closestDist = nil, math.huge
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= Players.LocalPlayer and plr.Character then
+                local root = plr.Character:FindFirstChild("HumanoidRootPart")
+                if root then
+                    local dist = (root.Position - localRoot.Position).Magnitude
+                    if dist < closestDist then
+                        closestDist = dist
+                        closest     = plr
+                    end
+                end
+            end
+        end
+        return closest
+    elseif aimbotMode == "Target" then
+        return Players:FindFirstChild(aimbotTarget)
+    end
+    return nil
+end
+
+local function startAimbot()
+    aimbotConn = RunService.RenderStepped:Connect(function()
+        local plr = getAimbotPlayer()
+        if not plr or not plr.Character then return end
+        local head = plr.Character:FindFirstChild("Head")
+                  or plr.Character:FindFirstChild("HumanoidRootPart")
+        if not head then return end
+        local cam = workspace.CurrentCamera
+        cam.CFrame = CFrame.new(cam.CFrame.Position, head.Position)
+    end)
+end
+
+local function stopAimbot()
+    if aimbotConn then aimbotConn:Disconnect() aimbotConn = nil end
+end
+
+local function setAimbotToggle(state)
+    aimbotEnabled          = state
+    settings.aimbotEnabled = state
+    saveSettings()
+    if state then startAimbot() else stopAimbot() end
+end
+
 -- ──────────────────────────────────────────────
 -- Kill Script  (forward declaration — assigned after all features)
 -- ──────────────────────────────────────────────
@@ -878,6 +942,79 @@ FeaturesTab:CreateToggle({
     Callback     = function(Value) setFlingToggle(Value) end,
 })
 
+FeaturesTab:CreateSection("Cheats")
+
+FeaturesTab:CreateToggle({
+    Name         = "🎯  Aimbot",
+    CurrentValue = settings.aimbotEnabled,
+    Flag         = "Aimbot",
+    Callback     = function(Value) setAimbotToggle(Value) end,
+})
+
+FeaturesTab:CreateDropdown({
+    Name            = "🎯  Aimbot Mode",
+    Options         = { "Nearest", "Target" },
+    CurrentOption   = { settings.aimbotMode },
+    MultipleOptions = false,
+    Flag            = "AimbotMode",
+    Callback        = function(Option)
+        aimbotMode         = Option
+        settings.aimbotMode = Option
+        saveSettings()
+        Rayfield:Notify({
+            Title    = "Aimbot Mode",
+            Content  = "Mode set to: " .. Option,
+            Duration = 2,
+        })
+    end,
+})
+
+FeaturesTab:CreateDropdown({
+    Name            = "👤  Target Player  (used in Target mode)",
+    Options         = (function()
+        local names = {}
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= Players.LocalPlayer then
+                table.insert(names, plr.Name)
+            end
+        end
+        if #names == 0 then names = { "No players found" } end
+        return names
+    end)(),
+    CurrentOption   = { settings.aimbotTarget ~= "" and settings.aimbotTarget or "No players found" },
+    MultipleOptions = false,
+    Flag            = "AimbotTarget",
+    Callback        = function(Option)
+        if Option == "No players found" then return end
+        aimbotTarget         = Option
+        settings.aimbotTarget = Option
+        saveSettings()
+        Rayfield:Notify({
+            Title    = "Aimbot Target",
+            Content  = "Now targeting: " .. Option,
+            Duration = 2,
+        })
+    end,
+})
+
+FeaturesTab:CreateButton({
+    Name     = "🔄  Refresh Player List",
+    Callback = function()
+        local names = {}
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= Players.LocalPlayer then
+                table.insert(names, plr.Name)
+            end
+        end
+        local list = #names > 0 and table.concat(names, ", ") or "No other players"
+        Rayfield:Notify({
+            Title    = "Players Online",
+            Content  = list .. "\n\nRe-execute the hub to reload the Target dropdown with updated players.",
+            Duration = 6,
+        })
+    end,
+})
+
 FeaturesTab:CreateSection("Settings")
 
 FeaturesTab:CreateButton({
@@ -916,6 +1053,9 @@ FeaturesTab:CreateButton({
         settings.hitboxEnabled = false
         settings.hitboxSizeVal = 5
         settings.flingEnabled  = false
+        settings.aimbotEnabled = false
+        settings.aimbotMode    = "Nearest"
+        settings.aimbotTarget  = ""
         saveSettings()
         setIJToggle(false)
         setSpeedToggle(false)
@@ -925,6 +1065,9 @@ FeaturesTab:CreateButton({
         setESPToggle(false)
         setHitboxToggle(false)
         setFlingToggle(false)
+        setAimbotToggle(false)
+        aimbotMode   = "Nearest"
+        aimbotTarget = ""
         currentWalkSpeed = 16
         Rayfield:Notify({ Title = "Reset", Content = "All settings reset to defaults.", Duration = 3 })
     end,
@@ -947,6 +1090,7 @@ killScript = function()
     pcall(function() setHitboxToggle(false) end)
     pcall(function() setFlingToggle(false) end)
     pcall(function() setFullBrightToggle(false) end)
+    pcall(function() setAimbotToggle(false) end)
 
     -- 2. Hard-restore the local character to a clean state
     pcall(function()
