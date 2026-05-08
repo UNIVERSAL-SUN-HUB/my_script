@@ -1,4 +1,4 @@
--- Naitik Hub | loader.lua (Rayfield Edition)
+-- Universal Sun Hub | loader.lua (Rayfield Edition)
 -- Place in StarterPlayerScripts
 
 local Players         = game:GetService("Players")
@@ -10,7 +10,7 @@ local player = Players.LocalPlayer
 -- ──────────────────────────────────────────────
 -- Settings  (saved to file, loaded on startup)
 -- ──────────────────────────────────────────────
-local SETTINGS_FILE = "naitik_hub_settings.txt"
+local SETTINGS_FILE = "universal_sun_hub_settings.txt"
 
 local settings = {
     menuKey            = "LeftControl",
@@ -176,11 +176,11 @@ local function applySpin()
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
     for _, v in pairs(root:GetChildren()) do
-        if v.Name == "NaitikSpin" then v:Destroy() end
+        if v.Name == "USHSpin" then v:Destroy() end
     end
     if spinEnabled then
         local bav = Instance.new("BodyAngularVelocity")
-        bav.Name           = "NaitikSpin"
+        bav.Name           = "USHSpin"
         bav.MaxTorque      = Vector3.new(0, math.huge, 0)
         bav.AngularVelocity = Vector3.new(0, spinSpeed, 0)
         bav.Parent         = root
@@ -346,14 +346,14 @@ local function createESP(plr)
         local head = char:FindFirstChild("Head")
         if not head then return end
         local hl = Instance.new("Highlight")
-        hl.Name                = "NaitikESP"
+        hl.Name                = "USHESP"
         hl.FillColor           = Color3.fromRGB(255, 0, 0)
         hl.OutlineColor        = Color3.fromRGB(255, 0, 0)
         hl.FillTransparency    = 0.5
         hl.OutlineTransparency = 0
         hl.Parent              = char
         local bill = Instance.new("BillboardGui")
-        bill.Name         = "NaitikESPBill"
+        bill.Name         = "USHESPBill"
         bill.Size         = UDim2.new(0, 100, 0, 20)
         bill.StudsOffset  = Vector3.new(0, 2, 0)
         bill.AlwaysOnTop  = true
@@ -682,8 +682,8 @@ end)
 -- Main Window
 -- ──────────────────────────────────────────────
 local Window = Rayfield:CreateWindow({
-    Name                   = "⚡  Naitik Hub",
-    LoadingTitle           = "Naitik Hub",
+    Name                   = "⚡  Universal Sun Hub",
+    LoadingTitle           = "Universal Sun Hub",
     LoadingSubtitle        = "Loading " .. #SCRIPTS .. " scripts & features...",
     Theme                  = "Default",
     DisableRayfieldPrompts = false,
@@ -700,10 +700,10 @@ local HomeTab = Window:CreateTab("Home", 4483362458)
 
 HomeTab:CreateSection("Welcome")
 HomeTab:CreateParagraph({
-    Title   = "⚡  Naitik Hub",
-    Content = "Welcome to Naitik Hub! "
+    Title   = "⚡  Universal Sun Hub",
+    Content = "Welcome to Universal Sun Hub! "
         .. #SCRIPTS .. " scripts loaded. 7 built-in features available.\n"
-        .. "All settings are saved automatically to naitik_hub_settings.txt.",
+        .. "All settings are saved automatically to universal_sun_hub_settings.txt.",
 })
 HomeTab:CreateParagraph({
     Title   = "📋  How to Use",
@@ -1105,7 +1105,7 @@ killScript = function()
         local root = char:FindFirstChild("HumanoidRootPart")
         if root then
             for _, obj in pairs(root:GetChildren()) do
-                if obj:IsA("BodyMover") or obj.Name == "NaitikSpin" then
+                if obj:IsA("BodyMover") or obj.Name == "USHSpin" then
                     obj:Destroy()
                 end
             end
@@ -1122,7 +1122,7 @@ killScript = function()
         for _, plr in pairs(Players:GetPlayers()) do
             if plr ~= Players.LocalPlayer and plr.Character then
                 for _, obj in pairs(plr.Character:GetDescendants()) do
-                    if obj.Name == "NaitikESP" or obj.Name == "NaitikESPBill" then
+                    if obj.Name == "USHESP" or obj.Name == "USHESPBill" then
                         obj:Destroy()
                     end
                 end
@@ -1137,7 +1137,7 @@ killScript = function()
             _floatGui = nil
         end
         -- Fallback: search by name
-        local nb = player:WaitForChild("PlayerGui"):FindFirstChild("NaitikFloatBtn")
+        local nb = player:WaitForChild("PlayerGui"):FindFirstChild("USHFloatBtn")
         if nb then nb:Destroy() end
     end)
 
@@ -1215,7 +1215,7 @@ task.spawn(function()
     local playerGui    = player:WaitForChild("PlayerGui")
 
     local FloatGui = Instance.new("ScreenGui")
-    FloatGui.Name            = "NaitikFloatBtn"
+    FloatGui.Name            = "USHFloatBtn"
     _floatGui                = FloatGui   -- expose to killScript
     FloatGui.ResetOnSpawn    = false
     FloatGui.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling

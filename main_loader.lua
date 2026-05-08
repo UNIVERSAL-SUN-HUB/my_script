@@ -9,7 +9,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 -- ── ScreenGui ────────────────────────────────────────────────────────
 local BootGui = Instance.new("ScreenGui")
-BootGui.Name          = "NaitikBootGui"
+BootGui.Name          = "USHBootGui"
 BootGui.ResetOnSpawn  = false
 BootGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 BootGui.Parent        = playerGui
@@ -71,7 +71,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size                 = UDim2.new(1, -24, 0, 28)
 TitleLabel.Position             = UDim2.new(0, 12, 0, 68)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text                 = "Naitik Hub  ·  Ready to execute"
+TitleLabel.Text                 = "Universal Sun Hub  ·  Ready to execute"
 TitleLabel.TextColor3           = Color3.fromRGB(230, 230, 255)
 TitleLabel.TextSize             = 17
 TitleLabel.Font                 = Enum.Font.GothamBold
@@ -83,7 +83,7 @@ local SubLabel = Instance.new("TextLabel")
 SubLabel.Size                 = UDim2.new(1, -24, 0, 50)
 SubLabel.Position             = UDim2.new(0, 12, 0, 100)
 SubLabel.BackgroundTransparency = 1
-SubLabel.Text                 = "This will load Rayfield UI + all scripts\nand open the full Naitik Hub menu."
+SubLabel.Text                 = "This will load Rayfield UI + all scripts\nand open the full Universal Sun Hub menu."
 SubLabel.TextColor3           = Color3.fromRGB(130, 130, 180)
 SubLabel.TextSize             = 13
 SubLabel.Font                 = Enum.Font.Gotham
@@ -185,7 +185,7 @@ local ProgTitle = Instance.new("TextLabel")
 ProgTitle.Size                 = UDim2.new(1, -20, 0, 34)
 ProgTitle.Position             = UDim2.new(0, 12, 0, 14)
 ProgTitle.BackgroundTransparency = 1
-ProgTitle.Text                 = "⚡  Loading Naitik Hub..."
+ProgTitle.Text                 = "⚡  Loading Universal Sun Hub..."
 ProgTitle.TextColor3           = Color3.fromRGB(220, 220, 255)
 ProgTitle.TextSize             = 16
 ProgTitle.Font                 = Enum.Font.GothamBold
@@ -323,7 +323,7 @@ local function runLoadSequence()
     setProgress(0.92, "📦  Registering scripts & features...", "20 scripts · 7 features · settings restored")
     task.wait(0.4)
 
-    setProgress(1.0, "✅  Done! Hub is ready.", "Naitik Hub loaded successfully.")
+    setProgress(1.0, "✅  Done! Hub is ready.", "Universal Sun Hub loaded successfully.")
     ProgStroke.Color = Color3.fromRGB(60, 200, 100)
     task.wait(0.8)
 

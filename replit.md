@@ -1,4 +1,4 @@
-# Naitik Hub — Roblox Script Hub / Loader Menu
+# Universal Sun Hub — Roblox Script Hub / Loader Menu
 
 ## Project Overview
 
