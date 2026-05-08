@@ -80,7 +80,7 @@ SubText.Parent = ConfirmBox
 
 local ExecBtn = Instance.new("TextButton")
 ExecBtn.Size = UDim2.new(0, 130, 0, 36)
-ExecBtn.Position = UDim2.new(0.5, -70, 1, -52)
+ExecBtn.Position = UDim2.new(0, 20, 1, -52)
 ExecBtn.BackgroundColor3 = Color3.fromRGB(60, 100, 220)
 ExecBtn.BorderSizePixel = 0
 ExecBtn.Text = "▶  Execute"
@@ -96,6 +96,35 @@ ExecBtn.MouseEnter:Connect(function()
 end)
 ExecBtn.MouseLeave:Connect(function()
     TweenService:Create(ExecBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(60, 100, 220) }):Play()
+end)
+
+-- ──────────────────────────────────────────────
+-- Close Button
+-- ──────────────────────────────────────────────
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 130, 0, 36)
+CloseBtn.Position = UDim2.new(1, -150, 1, -52)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
+CloseBtn.BorderSizePixel = 0
+CloseBtn.Text = "✕  Close"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 14
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.ZIndex = 3
+CloseBtn.Parent = ConfirmBox
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
+
+CloseBtn.MouseEnter:Connect(function()
+    TweenService:Create(CloseBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(210, 60, 60) }):Play()
+end)
+CloseBtn.MouseLeave:Connect(function()
+    TweenService:Create(CloseBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(160, 40, 40) }):Play()
+end)
+CloseBtn.MouseButton1Click:Connect(function()
+    TweenService:Create(Backdrop,    TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+    TweenService:Create(ConfirmBox,  TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+    task.wait(0.35)
+    BootGui:Destroy()
 end)
 
 -- ──────────────────────────────────────────────
