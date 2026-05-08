@@ -227,6 +227,12 @@ local function showNotification()
     end)
 end
 
+local function hideNotification()
+    TweenService:Create(Notification, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Position = UDim2.new(0.5, -140, 0, -50)
+    }):Play()
+end
+
 showNotification()
 
 -- ──────────────────────────────────────────────
@@ -1270,10 +1276,12 @@ openMenu = function()
     MenuFrame.Visible = true
 end
 
-hideMenu = function()
+hideMenu = function(showNotif)
     menuOpen = false
     MenuFrame.Visible = false
-    showNotification()
+    if showNotif ~= false then
+        showNotification()
+    end
 end
 
 CloseBtn.MouseButton1Click:Connect(function()
@@ -1282,7 +1290,8 @@ end)
 
 DialogYes.MouseButton1Click:Connect(function()
     ConfirmDialog.Visible = false
-    hideMenu()
+    hideMenu(false)
+    hideNotification()
 end)
 
 DialogNo.MouseButton1Click:Connect(function()
