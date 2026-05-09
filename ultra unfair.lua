@@ -860,28 +860,56 @@ local function getEnemyPartsInViewport(range)
 end
 
 -- ─────────────────────────────────────────────────
---  firetouchinterest attack
---  Activates the tool and fires touch events on
---  every enemy part in viewport — server registers
---  real damage and gives full rewards
+--  Attack function — 3-layer approach, zero input
 -- ─────────────────────────────────────────────────
-local FARM_RANGE = 20   -- studs — adjust if needed
+local FARM_RANGE = 20
 
-local function fireTouchAttack(range)
+local function doAttack(targetRoot, range)
     local tool = char:FindFirstChildOfClass("Tool")
-    if not tool then return end
-    local handle = tool:FindFirstChild("Handle")
-    if not handle then return end
+    local handle = tool and tool:FindFirstChild("Handle")
 
-    local parts = getEnemyPartsInViewport(range or FARM_RANGE)
-    for _, part in ipairs(parts) do
-        pcall(function()
-            -- No clicking at all — firetouchinterest fires touch damage
-            -- directly on the server, game registers it as a real hit
-            firetouchinterest(handle, part, 0)
-            firetouchinterest(handle, part, 1)
-        end)
+    -- ── Layer 1: tool:Activate() ──────────────────
+    -- NOT a mouse click. This is a direct Lua API call
+    -- that fires the tool's Activated event — exactly
+    -- what the game's combat system listens to.
+    -- The server receives it as a legitimate tool activation.
+    pcall(function()
+        if tool then tool:Activate() end
+    end)
+
+    -- ── Layer 2: firetouchinterest ────────────────
+    -- Fires physical touch events between tool and
+    -- NPC parts. Works for games using Touched events.
+    if handle then
+        local parts = getEnemyPartsInViewport(range or FARM_RANGE)
+        for _, part in ipairs(parts) do
+            pcall(function()
+                firetouchinterest(handle, part, 0)
+                firetouchinterest(handle, part, 1)
+            end)
+        end
     end
+
+    -- ── Layer 3: fire combat RemoteEvents directly ─
+    -- Scans ReplicatedStorage for the game's own attack
+    -- remotes and fires them with the target's info.
+    -- No input involved — pure server communication.
+    pcall(function()
+        for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+            if v:IsA("RemoteEvent") then
+                local n = v.Name:lower()
+                if n:find("attack") or n:find("m1") or n:find("punch")
+                or n:find("hit")    or n:find("damage") or n:find("combat")
+                or n:find("swing")  or n:find("ability") or n:find("skill") then
+                    if targetRoot then
+                        v:FireServer(targetRoot.Parent, targetRoot.CFrame.Position)
+                    else
+                        v:FireServer()
+                    end
+                end
+            end
+        end
+    end)
 end
 
 -- ─────────────────────────────────────────────────
@@ -964,9 +992,8 @@ end)
 
 -- ─────────────────────────────────────────────────
 --  ══ Combat loop ══
---  Uses firetouchinterest on enemy parts in viewport
---  — game registers real damage + gives full rewards.
---  No mouse clicks, no hitbox changes, no misclicks.
+--  3-layer attack: tool:Activate() + firetouchinterest
+--  + RemoteEvent scan. Zero input simulation.
 -- ─────────────────────────────────────────────────
 task.spawn(function()
     while task.wait() do   -- task.wait() = ~1/30s, fast but not spammy
@@ -982,10 +1009,8 @@ task.spawn(function()
                 end
 
                 if farmTarget then
-                    -- Drag the NPC to us (Heartbeat also does this, double coverage)
                     dragNPCToPlayer(farmTarget)
-                    -- Attack with firetouchinterest on all its parts in view
-                    fireTouchAttack(FARM_RANGE)
+                    doAttack(farmTarget, FARM_RANGE)
                 end
             end)
 
@@ -1015,7 +1040,7 @@ task.spawn(function()
                     pcall(function()
                         rootPart.CFrame = CFrame.lookAt(rootPart.Position, best.Position)
                     end)
-                    fireTouchAttack(State.killAuraRange)
+                    doAttack(best, State.killAuraRange)
                 end
             end)
         end
@@ -1030,7 +1055,7 @@ task.spawn(function()
                 end
                 if auraTarget then
                     dragNPCToPlayer(auraTarget)
-                    fireTouchAttack(FARM_RANGE)
+                    doAttack(auraTarget, FARM_RANGE)
                 end
             end)
         else
