@@ -785,37 +785,37 @@ makeButton(pagePlayer, "Rejoin Server", "Leaves and rejoins the same game", 7, f
 end)
 
 -- ─────────────────────────────────────────────────
---  Shared target references (set by farm/aura loops)
+--  Shared target references
 -- ─────────────────────────────────────────────────
-local farmTarget = nil   -- RootPart of current farm NPC
-local auraTarget = nil   -- RootPart of current kill aura NPC
+local farmTarget = nil
+local auraTarget = nil
 
 -- ─────────────────────────────────────────────────
---  M1 Spam helper — activates equipped tool properly
---  so the server registers damage and gives rewards
+--  Real M1 click — uses executor mouse1click() so
+--  the game registers it as a genuine left-click hit.
+--  Falls back to tool:Activate() if not available.
 -- ─────────────────────────────────────────────────
-local function fireM1(targetRoot)
+local function doM1()
+    -- Method 1: executor mouse1click (most compatible)
+    if mouse1click then
+        pcall(mouse1click)
+    elseif mouse1press then
+        pcall(mouse1press)
+        pcall(mouse1release)
+    end
+    -- Method 2: tool activate (always fires alongside)
     pcall(function()
-        -- Face the target
-        if targetRoot then
-            rootPart.CFrame = CFrame.lookAt(rootPart.Position, targetRoot.Position)
-        end
-        -- 1) Activate the equipped tool (main approach — server-sided)
         local tool = char:FindFirstChildOfClass("Tool")
-        if tool then
-            tool:Activate()
-        end
-        -- 2) Also fire any attack/hit/m1/punch remotes as fallback
+        if tool then tool:Activate() end
+    end)
+    -- Method 3: fire known attack remotes
+    pcall(function()
         for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
             if v:IsA("RemoteEvent") then
                 local n = v.Name:lower()
                 if n:find("attack") or n:find("m1") or n:find("punch")
                 or n:find("hit") or n:find("swing") or n:find("damage") then
-                    if targetRoot then
-                        v:FireServer(targetRoot.Parent, targetRoot.CFrame.Position)
-                    else
-                        v:FireServer()
-                    end
+                    v:FireServer()
                     break
                 end
             end
@@ -824,7 +824,52 @@ local function fireM1(targetRoot)
 end
 
 -- ─────────────────────────────────────────────────
---  Find nearest valid NPC
+--  Expand NPC hitbox so clicks always land
+-- ─────────────────────────────────────────────────
+local expandedNPCs = {}
+local function expandHitbox(npcRoot)
+    if not npcRoot or expandedNPCs[npcRoot] then return end
+    expandedNPCs[npcRoot] = npcRoot.Size
+    pcall(function() npcRoot.Size = Vector3.new(12, 12, 12) end)
+    -- Also expand all parts in the NPC model
+    pcall(function()
+        for _, p in ipairs(npcRoot.Parent:GetDescendants()) do
+            if p:IsA("BasePart") and p ~= npcRoot then
+                p.Size = Vector3.new(
+                    math.max(p.Size.X, 6),
+                    math.max(p.Size.Y, 6),
+                    math.max(p.Size.Z, 6)
+                )
+            end
+        end
+    end)
+end
+
+local function restoreHitbox(npcRoot)
+    if not npcRoot or not expandedNPCs[npcRoot] then return end
+    pcall(function() npcRoot.Size = expandedNPCs[npcRoot] end)
+    expandedNPCs[npcRoot] = nil
+end
+
+-- ─────────────────────────────────────────────────
+--  Drag NPC to player — pulls the NPC's rootpart
+--  directly in front of the player every frame so
+--  it cannot walk away
+-- ─────────────────────────────────────────────────
+local function dragNPCToPlayer(npcRoot)
+    if not npcRoot or not npcRoot.Parent then return end
+    pcall(function()
+        -- Place NPC right in front of player at same height
+        local targetCF = rootPart.CFrame * CFrame.new(0, 0, -3)
+        npcRoot.CFrame = targetCF
+        -- Kill its velocity so it can't slide away
+        npcRoot.AssemblyLinearVelocity  = Vector3.zero
+        npcRoot.AssemblyAngularVelocity = Vector3.zero
+    end)
+end
+
+-- ─────────────────────────────────────────────────
+--  Find nearest NPC / Boss
 -- ─────────────────────────────────────────────────
 local function getNearestNPC(maxHp)
     local best, bestDist = nil, math.huge
@@ -832,8 +877,8 @@ local function getNearestNPC(maxHp)
         if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 then
             local rp = v.Parent:FindFirstChild("HumanoidRootPart")
             if rp then
-                local inHpRange = (maxHp == nil) or (v.MaxHealth <= maxHp)
-                if inHpRange then
+                local ok = (maxHp == nil) or (v.MaxHealth <= maxHp)
+                if ok then
                     local d = (rp.Position - rootPart.Position).Magnitude
                     if d < bestDist then bestDist = d; best = rp end
                 end
@@ -858,12 +903,10 @@ local function getNearestBoss()
 end
 
 -- ─────────────────────────────────────────────────
---  ══ RunService Loop ══
---  Runs every frame: pins character on top of targets
---  and handles inf jump / speed. Kept minimal to avoid lag.
+--  ══ Heartbeat — Inf Jump / Speed / NPC drag ══
+--  Only lightweight per-frame work here to avoid lag
 -- ─────────────────────────────────────────────────
 RunService.Heartbeat:Connect(function()
-    -- Infinite Jump
     if State.infJump then
         pcall(function()
             if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
@@ -872,51 +915,61 @@ RunService.Heartbeat:Connect(function()
         end)
     end
 
-    -- Speed persistence
     if State.speedEnabled then
         pcall(function() humanoid.WalkSpeed = State.speedValue end)
     end
 
-    -- Pin ON TOP of farm target so NPC can't run away
-    if State.autoFarm and farmTarget and farmTarget.Parent and farmTarget.Parent:FindFirstChildOfClass("Humanoid") then
-        pcall(function()
-            rootPart.CFrame = farmTarget.CFrame * CFrame.new(0, 2.5, 0)
-        end)
+    -- Drag farm NPC to player every frame so it can't escape
+    if State.autoFarm and farmTarget and farmTarget.Parent
+    and farmTarget.Parent:FindFirstChildOfClass("Humanoid")
+    and farmTarget.Parent:FindFirstChildOfClass("Humanoid").Health > 0 then
+        dragNPCToPlayer(farmTarget)
     end
 
-    -- Pin ON TOP of boss target
-    if State.autoBoss and auraTarget and auraTarget.Parent and auraTarget.Parent:FindFirstChildOfClass("Humanoid") then
-        pcall(function()
-            rootPart.CFrame = auraTarget.CFrame * CFrame.new(0, 2.5, 0)
-        end)
+    -- Drag boss NPC to player every frame
+    if State.autoBoss and auraTarget and auraTarget.Parent
+    and auraTarget.Parent:FindFirstChildOfClass("Humanoid")
+    and auraTarget.Parent:FindFirstChildOfClass("Humanoid").Health > 0 then
+        dragNPCToPlayer(auraTarget)
     end
 end)
 
 -- ─────────────────────────────────────────────────
---  M1 spam loop — 0.1s tick (separate from Heartbeat
---  to avoid frame-rate lag while still being fast)
+--  ══ M1 Spam loop — 0.07s tick ══
+--  Rapid left-click attacks on locked NPC
 -- ─────────────────────────────────────────────────
 task.spawn(function()
-    while task.wait(0.1) do
-        -- Auto Farm M1 spam
+    while task.wait(0.07) do
+
+        -- AUTO FARM
         if State.autoFarm then
             pcall(function()
-                -- Pick or refresh target
+                -- Refresh target if dead or gone
                 if not farmTarget or not farmTarget.Parent
                 or not farmTarget.Parent:FindFirstChildOfClass("Humanoid")
                 or farmTarget.Parent:FindFirstChildOfClass("Humanoid").Health <= 0 then
+                    -- Restore old hitbox before switching
+                    if farmTarget then restoreHitbox(farmTarget) end
                     farmTarget = getNearestNPC(8000)
+                    if farmTarget then expandHitbox(farmTarget) end
                 end
                 if farmTarget then
-                    fireM1(farmTarget)
+                    -- Face NPC and spam M1
+                    pcall(function()
+                        rootPart.CFrame = CFrame.lookAt(
+                            rootPart.Position,
+                            farmTarget.Position
+                        )
+                    end)
+                    doM1()
                 end
             end)
         else
+            if farmTarget then restoreHitbox(farmTarget) end
             farmTarget = nil
         end
 
-        -- Kill Aura M1 spam — uses tool activation, NOT Health=0
-        -- This ensures rewards are properly given by the server
+        -- KILL AURA — drag nearest in-range NPC and spam M1
         if State.killAura then
             pcall(function()
                 local best, bestDist = nil, math.huge
@@ -932,30 +985,41 @@ task.spawn(function()
                     end
                 end
                 if best then
-                    -- Teleport next to target (not on top, to avoid conflict with farm pin)
-                    if not State.autoFarm then
-                        rootPart.CFrame = best.CFrame * CFrame.new(0, 2.5, 0)
-                    end
-                    fireM1(best)
+                    expandHitbox(best)
+                    dragNPCToPlayer(best)
+                    pcall(function()
+                        rootPart.CFrame = CFrame.lookAt(rootPart.Position, best.Position)
+                    end)
+                    doM1()
                 end
             end)
         end
 
-        -- Auto Boss M1 spam
+        -- AUTO BOSS
         if State.autoBoss then
             pcall(function()
                 if not auraTarget or not auraTarget.Parent
                 or not auraTarget.Parent:FindFirstChildOfClass("Humanoid")
                 or auraTarget.Parent:FindFirstChildOfClass("Humanoid").Health <= 0 then
+                    if auraTarget then restoreHitbox(auraTarget) end
                     auraTarget = getNearestBoss()
+                    if auraTarget then expandHitbox(auraTarget) end
                 end
                 if auraTarget then
-                    fireM1(auraTarget)
+                    pcall(function()
+                        rootPart.CFrame = CFrame.lookAt(
+                            rootPart.Position,
+                            auraTarget.Position
+                        )
+                    end)
+                    doM1()
                 end
             end)
         else
+            if auraTarget then restoreHitbox(auraTarget) end
             auraTarget = nil
         end
+
     end
 end)
 
