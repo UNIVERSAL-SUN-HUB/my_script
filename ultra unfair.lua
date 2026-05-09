@@ -34,6 +34,7 @@ local State = {
     speedEnabled = false,
     speedValue   = 50,
     killAuraRange = 20,
+    weakenNPCs   = false,
 }
 
 -- ─────────────────────────────────────────────────
@@ -601,6 +602,13 @@ makeToggle(pageFarm, "Auto Boss", "Automatically targets and attacks boss enemie
     toast(v and "Auto Boss ON" or "Auto Boss OFF")
 end)
 
+makeDivider(pageFarm, "Weaken", 5)
+
+makeToggle(pageFarm, "Set Nearby NPCs to 1 HP", "All enemy NPCs within 20 studs drop to 1 HP — one hit gives full reward", 6, function(v)
+    State.weakenNPCs = v
+    toast(v and "Weaken ON — NPCs set to 1 HP" or "Weaken OFF")
+end)
+
 makeButton(pageFarm, "Collect All Rewards", "Collect any pending quest / daily rewards", 5, function()
     toast("Collecting rewards...")
     pcall(function()
@@ -1029,6 +1037,23 @@ task.spawn(function()
                         rootPart.CFrame = CFrame.lookAt(rootPart.Position, best.Position)
                     end)
                     pressE()
+                end
+            end)
+        end
+
+        -- ── WEAKEN NEARBY NPCs TO 1 HP ─────────────
+        -- Sets every enemy humanoid within 20 studs to 1 HP.
+        -- Player still lands the killing blow so rewards drop.
+        if State.weakenNPCs then
+            pcall(function()
+                for _, v in ipairs(workspace:GetDescendants()) do
+                    if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 1
+                    and not isShopNPC(v.Parent) then
+                        local rp = v.Parent:FindFirstChild("HumanoidRootPart")
+                        if rp and (rp.Position - rootPart.Position).Magnitude <= 20 then
+                            v.Health = 1
+                        end
+                    end
                 end
             end)
         end
