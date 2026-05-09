@@ -876,7 +876,8 @@ local function fireTouchAttack(range)
     local parts = getEnemyPartsInViewport(range or FARM_RANGE)
     for _, part in ipairs(parts) do
         pcall(function()
-            tool:Activate()
+            -- No clicking at all — firetouchinterest fires touch damage
+            -- directly on the server, game registers it as a real hit
             firetouchinterest(handle, part, 0)
             firetouchinterest(handle, part, 1)
         end)
