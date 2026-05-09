@@ -32,25 +32,31 @@ local settings = {
     aimbotTarget       = "",
 }
 
+-- safeStr: Rayfield dropdowns sometimes pass a table {value}; this unwraps it safely
+local function safeStr(v)
+    if type(v) == "table" then return tostring(v[1] or "") end
+    return tostring(v)
+end
+
 local function saveSettings()
     local lines = {
-        "menuKey="       .. settings.menuKey,
-        "ijEnabled="     .. tostring(settings.ijEnabled),
-        "speedEnabled="  .. tostring(settings.speedEnabled),
-        "speedVal="      .. tostring(settings.speedVal),
-        "spinEnabled="   .. tostring(settings.spinEnabled),
-        "spinSpeedVal="  .. tostring(settings.spinSpeedVal),
-        "noclipEnabled=" .. tostring(settings.noclipEnabled),
-        "flyEnabled="    .. tostring(settings.flyEnabled),
-        "flySpeedVal="   .. tostring(settings.flySpeedVal),
-        "espEnabled="    .. tostring(settings.espEnabled),
-        "hitboxEnabled=" .. tostring(settings.hitboxEnabled),
-        "hitboxSizeVal=" .. tostring(settings.hitboxSizeVal),
+        "menuKey="            .. safeStr(settings.menuKey),
+        "ijEnabled="          .. tostring(settings.ijEnabled),
+        "speedEnabled="       .. tostring(settings.speedEnabled),
+        "speedVal="           .. tostring(settings.speedVal),
+        "spinEnabled="        .. tostring(settings.spinEnabled),
+        "spinSpeedVal="       .. tostring(settings.spinSpeedVal),
+        "noclipEnabled="      .. tostring(settings.noclipEnabled),
+        "flyEnabled="         .. tostring(settings.flyEnabled),
+        "flySpeedVal="        .. tostring(settings.flySpeedVal),
+        "espEnabled="         .. tostring(settings.espEnabled),
+        "hitboxEnabled="      .. tostring(settings.hitboxEnabled),
+        "hitboxSizeVal="      .. tostring(settings.hitboxSizeVal),
         "flingEnabled="       .. tostring(settings.flingEnabled),
         "fullBrightEnabled="  .. tostring(settings.fullBrightEnabled),
         "aimbotEnabled="      .. tostring(settings.aimbotEnabled),
-        "aimbotMode="         .. settings.aimbotMode,
-        "aimbotTarget="       .. settings.aimbotTarget,
+        "aimbotMode="         .. safeStr(settings.aimbotMode),
+        "aimbotTarget="       .. safeStr(settings.aimbotTarget),
     }
     pcall(function() writefile(SETTINGS_FILE, table.concat(lines, "\n")) end)
 end
@@ -767,6 +773,32 @@ Players.LocalPlayer.CharacterAdded:Connect(function()
     if zeroGravEnabled then task.wait(0.3) setZeroGravToggle(true) end
 end)
 
+-- ── Fling All ─────────────────────────────────
+local flingAllEnabled = false
+
+local function setFlingAllToggle(state)
+    flingAllEnabled = state
+    if state then
+        task.spawn(function()
+            while flingAllEnabled do
+                for _, plr in pairs(Players:GetPlayers()) do
+                    if plr ~= Players.LocalPlayer and plr.Character then
+                        local root = plr.Character:FindFirstChild("HumanoidRootPart")
+                        if root then
+                            pcall(function()
+                                root.Velocity = Vector3.new(
+                                    math.random(-300, 300), 800, math.random(-300, 300)
+                                )
+                            end)
+                        end
+                    end
+                end
+                task.wait(0.1)
+            end
+        end)
+    end
+end
+
 -- ── NEW_AntiFling ─────────────────────────────
 -- Makes other players' parts non-colliding with you (you phase through them)
 local newAntiFlingEnabled = false
@@ -938,45 +970,313 @@ local HomeTab = Window:CreateTab("Home", 4483362458)
 HomeTab:CreateSection("Welcome")
 HomeTab:CreateParagraph({
     Title   = "⚡  Universal Sun Hub",
-    Content = "Welcome to Universal Sun Hub! "
-        .. #SCRIPTS .. " scripts loaded. 7 built-in features available.\n"
-        .. "All settings are saved automatically to universal_sun_hub_settings.txt.",
-})
-HomeTab:CreateParagraph({
-    Title   = "📋  How to Use",
-    Content = "• Scripts tab → click any script button to execute it\n"
-        .. "• Executor tab → type & run your own Lua code\n"
-        .. "• Features tab → toggle cheats and adjust values with sliders\n"
-        .. "• Settings auto-save on every change",
+    Content = "Welcome! " .. #SCRIPTS .. " scripts loaded.\n"
+        .. "Toggle the hub with " .. getKeyName(menuKey) .. " or the N button.",
 })
 
-HomeTab:CreateSection("Danger Zone")
+-- ─── Movement ──────────────────────────────────────────────────────────────
+HomeTab:CreateSection("Movement")
+
+HomeTab:CreateToggle({
+    Name         = "♾  Infinite Jump",
+    CurrentValue = settings.ijEnabled,
+    Flag         = "InfiniteJump",
+    Callback     = function(Value) setIJToggle(Value) end,
+})
+
+HomeTab:CreateToggle({
+    Name         = "⚡  Speed Boost",
+    CurrentValue = settings.speedEnabled,
+    Flag         = "SpeedBoost",
+    Callback     = function(Value) setSpeedToggle(Value) end,
+})
+
+HomeTab:CreateSlider({
+    Name         = "⚡  Walk Speed",
+    Range        = { 0, 500 },
+    Increment    = 1,
+    Suffix       = " spd",
+    CurrentValue = settings.speedVal,
+    Flag         = "WalkSpeed",
+    Callback     = function(Value)
+        currentWalkSpeed  = Value
+        settings.speedVal = Value
+        saveSettings()
+        if speedEnabled then applyWalkSpeed() end
+    end,
+})
+
+HomeTab:CreateToggle({
+    Name         = "👻  Noclip",
+    CurrentValue = settings.noclipEnabled,
+    Flag         = "Noclip",
+    Callback     = function(Value) setNoclipToggle(Value) end,
+})
+
+HomeTab:CreateToggle({
+    Name         = "🚀  Fly  (WASD, Q=up, E=down)",
+    CurrentValue = settings.flyEnabled,
+    Flag         = "Fly",
+    Callback     = function(Value) setFlyToggle(Value) end,
+})
+
+HomeTab:CreateSlider({
+    Name         = "🚀  Fly Speed",
+    Range        = { 0, 500 },
+    Increment    = 1,
+    Suffix       = " spd",
+    CurrentValue = settings.flySpeedVal,
+    Flag         = "FlySpeed",
+    Callback     = function(Value)
+        flySpeed             = Value
+        settings.flySpeedVal = Value
+        saveSettings()
+    end,
+})
+
+HomeTab:CreateToggle({
+    Name         = "🌀  Spin",
+    CurrentValue = settings.spinEnabled,
+    Flag         = "Spin",
+    Callback     = function(Value) setSpinToggle(Value) end,
+})
+
+HomeTab:CreateSlider({
+    Name         = "🌀  Spin Speed",
+    Range        = { 1, 200 },
+    Increment    = 1,
+    Suffix       = " spd",
+    CurrentValue = settings.spinSpeedVal,
+    Flag         = "SpinSpeed",
+    Callback     = function(Value)
+        spinSpeed             = Value
+        settings.spinSpeedVal = Value
+        saveSettings()
+        if spinEnabled then applySpin() end
+    end,
+})
+
+HomeTab:CreateToggle({
+    Name         = "🪂  NoFall  (no fall damage)",
+    CurrentValue = false,
+    Flag         = "NoFall",
+    Callback     = function(Value) setNoFallToggle(Value) end,
+})
+
+HomeTab:CreateToggle({
+    Name         = "🕷  Wall Walk  (walk up walls)",
+    CurrentValue = false,
+    Flag         = "WallWalk",
+    Callback     = function(Value) setWallWalkToggle(Value) end,
+})
+
+HomeTab:CreateToggle({
+    Name         = "🌐  Zero Gravity  (float, WASD to move)",
+    CurrentValue = false,
+    Flag         = "ZeroGravity",
+    Callback     = function(Value) setZeroGravToggle(Value) end,
+})
+
+-- ─── Visual ────────────────────────────────────────────────────────────────
+HomeTab:CreateSection("Visual")
+
+HomeTab:CreateToggle({
+    Name         = "☀  Full Bright",
+    CurrentValue = settings.fullBrightEnabled,
+    Flag         = "FullBright",
+    Callback     = function(Value) setFullBrightToggle(Value) end,
+})
+
+HomeTab:CreateToggle({
+    Name         = "👁  ESP  (Highlight + Name tag)",
+    CurrentValue = settings.espEnabled,
+    Flag         = "ESP",
+    Callback     = function(Value) setESPToggle(Value) end,
+})
+
+HomeTab:CreateToggle({
+    Name         = "📦  Hitbox Expander",
+    CurrentValue = settings.hitboxEnabled,
+    Flag         = "Hitbox",
+    Callback     = function(Value) setHitboxToggle(Value) end,
+})
+
+HomeTab:CreateSlider({
+    Name         = "📦  Hitbox Size",
+    Range        = { 1, 50 },
+    Increment    = 1,
+    Suffix       = " size",
+    CurrentValue = settings.hitboxSizeVal,
+    Flag         = "HitboxSize",
+    Callback     = function(Value)
+        hitboxSize             = Value
+        settings.hitboxSizeVal = Value
+        saveSettings()
+        if hitboxEnabled then applyAllHitboxes() end
+    end,
+})
+
+-- ─── Combat ────────────────────────────────────────────────────────────────
+HomeTab:CreateSection("Combat")
+
+HomeTab:CreateToggle({
+    Name         = "🎯  cam_aimbot",
+    CurrentValue = settings.aimbotEnabled,
+    Flag         = "Aimbot",
+    Callback     = function(Value) setAimbotToggle(Value) end,
+})
+
+HomeTab:CreateDropdown({
+    Name            = "🎯  cam_aimbot Mode",
+    Options         = { "Nearest", "Target" },
+    CurrentOption   = { settings.aimbotMode },
+    MultipleOptions = false,
+    Flag            = "AimbotMode",
+    Callback        = function(Option)
+        local val = type(Option) == "table" and safeStr(Option) or tostring(Option)
+        aimbotMode          = val
+        settings.aimbotMode = val
+        saveSettings()
+        Rayfield:Notify({ Title = "cam_aimbot Mode", Content = "Mode: " .. val, Duration = 2 })
+    end,
+})
+
+HomeTab:CreateDropdown({
+    Name            = "👤  Target Player",
+    Options         = (function()
+        local names = {}
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= Players.LocalPlayer then
+                table.insert(names, plr.Name)
+            end
+        end
+        if #names == 0 then names = { "No players" } end
+        return names
+    end)(),
+    CurrentOption   = { settings.aimbotTarget ~= "" and settings.aimbotTarget or "No players" },
+    MultipleOptions = false,
+    Flag            = "AimbotTarget",
+    Callback        = function(Option)
+        local val = type(Option) == "table" and safeStr(Option) or tostring(Option)
+        if val == "No players" then return end
+        aimbotTarget          = val
+        settings.aimbotTarget = val
+        saveSettings()
+        Rayfield:Notify({ Title = "Target", Content = "Targeting: " .. val, Duration = 2 })
+    end,
+})
+
+HomeTab:CreateButton({
+    Name     = "🔄  Refresh Player List",
+    Callback = function()
+        local names = {}
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= Players.LocalPlayer then table.insert(names, plr.Name) end
+        end
+        local list = #names > 0 and table.concat(names, ", ") or "No other players"
+        Rayfield:Notify({ Title = "Players Online", Content = list, Duration = 5 })
+    end,
+})
+
+HomeTab:CreateButton({
+    Name     = "📍  Target TP  (teleport to target)",
+    Callback = function() doTargetTP() end,
+})
+
+HomeTab:CreateButton({
+    Name     = "💨  Target Fling  (fling selected target)",
+    Callback = function() doTargetFling() end,
+})
+
+HomeTab:CreateToggle({
+    Name         = "💥  WalkFling  (fling into others)",
+    CurrentValue = settings.flingEnabled,
+    Flag         = "WalkFling",
+    Callback     = function(Value) setFlingToggle(Value) end,
+})
+
+HomeTab:CreateToggle({
+    Name         = "💥  Fling All  (fling every player)",
+    CurrentValue = false,
+    Flag         = "FlingAll",
+    Callback     = function(Value) setFlingAllToggle(Value) end,
+})
+
+HomeTab:CreateToggle({
+    Name         = "🛡  NEW_AntiFling  (phase through players)",
+    CurrentValue = false,
+    Flag         = "NewAntiFling",
+    Callback     = function(Value) setNewAntiFlingToggle(Value) end,
+})
+
+-- ─── Server ────────────────────────────────────────────────────────────────
+HomeTab:CreateSection("Server")
+
+HomeTab:CreateButton({
+    Name     = "🔄  Rejoin  (reconnect to this server)",
+    Callback = function() doRejoin() end,
+})
+
+HomeTab:CreateButton({
+    Name     = "🔀  Server Hop  (jump to random server)",
+    Callback = function() doServerHop() end,
+})
+
+-- ─── Settings ──────────────────────────────────────────────────────────────
+HomeTab:CreateSection("Settings")
+
+HomeTab:CreateButton({
+    Name     = "⌨  Set Menu Key  (click then press a key)",
+    Callback = function()
+        Rayfield:Notify({ Title = "Listening...", Content = "Press any keyboard key now.", Duration = 4 })
+        local conn
+        conn = UserInputService.InputBegan:Connect(function(input, gp)
+            if gp or input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+            menuKey          = input.KeyCode
+            settings.menuKey = input.KeyCode.Name
+            saveSettings()
+            Rayfield:Notify({ Title = "Key Set", Content = "Menu key: " .. input.KeyCode.Name, Duration = 3 })
+            conn:Disconnect()
+        end)
+    end,
+})
+
+HomeTab:CreateButton({
+    Name     = "🗑  Reset All Settings",
+    Callback = function()
+        settings.menuKey       = "LeftControl"
+        settings.ijEnabled     = false
+        settings.speedEnabled  = false
+        settings.speedVal      = 16
+        settings.spinEnabled   = false
+        settings.spinSpeedVal  = 20
+        settings.noclipEnabled = false
+        settings.flyEnabled    = false
+        settings.flySpeedVal   = 50
+        settings.espEnabled    = false
+        settings.hitboxEnabled = false
+        settings.hitboxSizeVal = 5
+        settings.flingEnabled  = false
+        settings.fullBrightEnabled = false
+        settings.aimbotEnabled = false
+        settings.aimbotMode    = "Nearest"
+        settings.aimbotTarget  = ""
+        saveSettings()
+        setIJToggle(false) setSpeedToggle(false) setSpinToggle(false)
+        setNoclipToggle(false) setFlyToggle(false) setESPToggle(false)
+        setHitboxToggle(false) setFlingToggle(false) setFlingAllToggle(false)
+        setFullBrightToggle(false) setAimbotToggle(false)
+        setNoFallToggle(false) setWallWalkToggle(false)
+        setZeroGravToggle(false) setNewAntiFlingToggle(false)
+        aimbotMode = "Nearest" aimbotTarget = "" currentWalkSpeed = 16
+        Rayfield:Notify({ Title = "Reset", Content = "All settings reset to defaults.", Duration = 3 })
+    end,
+})
+
 HomeTab:CreateButton({
     Name     = "💀  Kill Script  (removes hub completely)",
     Callback = function()
         if killScript then killScript() end
-    end,
-})
-
-HomeTab:CreateSection("Server Tools")
-HomeTab:CreateButton({
-    Name     = "🔄  Rejoin Same Server",
-    Callback = function()
-        Rayfield:Notify({ Title = "Rejoining...", Content = "Connecting to same server.", Duration = 3 })
-        pcall(function()
-            game:GetService("TeleportService"):TeleportToPlaceInstance(
-                game.PlaceId, game.JobId, Players.LocalPlayer
-            )
-        end)
-    end,
-})
-HomeTab:CreateButton({
-    Name     = "🌐  Hop to New Server",
-    Callback = function()
-        Rayfield:Notify({ Title = "Hopping...", Content = "Finding a new server.", Duration = 3 })
-        pcall(function()
-            game:GetService("TeleportService"):Teleport(game.PlaceId, Players.LocalPlayer)
-        end)
     end,
 })
 
@@ -1046,323 +1346,6 @@ ExecutorTab:CreateButton({
     end,
 })
 
--- ──────────────────────────────────────────────
--- Features Tab
--- ──────────────────────────────────────────────
-local FeaturesTab = Window:CreateTab("Features", 4483362458)
-
-FeaturesTab:CreateSection("Movement")
-
-FeaturesTab:CreateToggle({
-    Name         = "♾️  Infinite Jump",
-    CurrentValue = settings.ijEnabled,
-    Flag         = "InfiniteJump",
-    Callback     = function(Value) setIJToggle(Value) end,
-})
-
-FeaturesTab:CreateToggle({
-    Name         = "⚡  Speed Boost  (off = default 16)",
-    CurrentValue = settings.speedEnabled,
-    Flag         = "SpeedBoost",
-    Callback     = function(Value) setSpeedToggle(Value) end,
-})
-
-FeaturesTab:CreateSlider({
-    Name         = "⚡  Walk Speed",
-    Range        = { 0, 500 },
-    Increment    = 1,
-    Suffix       = " speed",
-    CurrentValue = settings.speedVal,
-    Flag         = "WalkSpeed",
-    Callback     = function(Value)
-        currentWalkSpeed  = Value
-        settings.speedVal = Value
-        saveSettings()
-        if speedEnabled then applyWalkSpeed() end
-    end,
-})
-
-FeaturesTab:CreateToggle({
-    Name         = "🌀  Spin",
-    CurrentValue = settings.spinEnabled,
-    Flag         = "Spin",
-    Callback     = function(Value) setSpinToggle(Value) end,
-})
-
-FeaturesTab:CreateSlider({
-    Name         = "🌀  Spin Speed",
-    Range        = { 1, 200 },
-    Increment    = 1,
-    Suffix       = " speed",
-    CurrentValue = settings.spinSpeedVal,
-    Flag         = "SpinSpeed",
-    Callback     = function(Value)
-        spinSpeed              = Value
-        settings.spinSpeedVal  = Value
-        saveSettings()
-        if spinEnabled then applySpin() end
-    end,
-})
-
-FeaturesTab:CreateToggle({
-    Name         = "👻  Noclip",
-    CurrentValue = settings.noclipEnabled,
-    Flag         = "Noclip",
-    Callback     = function(Value) setNoclipToggle(Value) end,
-})
-
-FeaturesTab:CreateToggle({
-    Name         = "🚀  Fly  (WASD · Q up · E down)",
-    CurrentValue = settings.flyEnabled,
-    Flag         = "Fly",
-    Callback     = function(Value) setFlyToggle(Value) end,
-})
-
-FeaturesTab:CreateSlider({
-    Name         = "🚀  Fly Speed",
-    Range        = { 0, 500 },
-    Increment    = 1,
-    Suffix       = " speed",
-    CurrentValue = settings.flySpeedVal,
-    Flag         = "FlySpeed",
-    Callback     = function(Value)
-        flySpeed              = Value
-        settings.flySpeedVal  = Value
-        saveSettings()
-    end,
-})
-
-FeaturesTab:CreateSection("Visual")
-
-FeaturesTab:CreateToggle({
-    Name         = "☀️  Full Bright  (see clearly day & night)",
-    CurrentValue = settings.fullBrightEnabled,
-    Flag         = "FullBright",
-    Callback     = function(Value) setFullBrightToggle(Value) end,
-})
-
-FeaturesTab:CreateSection("Player")
-
-FeaturesTab:CreateToggle({
-    Name         = "👁  ESP  (Player Highlight + Name)",
-    CurrentValue = settings.espEnabled,
-    Flag         = "ESP",
-    Callback     = function(Value) setESPToggle(Value) end,
-})
-
-FeaturesTab:CreateToggle({
-    Name         = "📦  Hitbox Expander",
-    CurrentValue = settings.hitboxEnabled,
-    Flag         = "Hitbox",
-    Callback     = function(Value) setHitboxToggle(Value) end,
-})
-
-FeaturesTab:CreateSlider({
-    Name         = "📦  Hitbox Size",
-    Range        = { 1, 50 },
-    Increment    = 1,
-    Suffix       = " size",
-    CurrentValue = settings.hitboxSizeVal,
-    Flag         = "HitboxSize",
-    Callback     = function(Value)
-        hitboxSize             = Value
-        settings.hitboxSizeVal = Value
-        saveSettings()
-        if hitboxEnabled then applyAllHitboxes() end
-    end,
-})
-
-FeaturesTab:CreateToggle({
-    Name         = "💥  WalkFling",
-    CurrentValue = settings.flingEnabled,
-    Flag         = "WalkFling",
-    Callback     = function(Value) setFlingToggle(Value) end,
-})
-
-FeaturesTab:CreateSection("Cheats")
-
-FeaturesTab:CreateToggle({
-    Name         = "🎯  cam_aimbot",
-    CurrentValue = settings.aimbotEnabled,
-    Flag         = "Aimbot",
-    Callback     = function(Value) setAimbotToggle(Value) end,
-})
-
-FeaturesTab:CreateDropdown({
-    Name            = "🎯  cam_aimbot Mode",
-    Options         = { "Nearest", "Target" },
-    CurrentOption   = { settings.aimbotMode },
-    MultipleOptions = false,
-    Flag            = "AimbotMode",
-    Callback        = function(Option)
-        aimbotMode         = Option
-        settings.aimbotMode = Option
-        saveSettings()
-        Rayfield:Notify({
-            Title    = "Aimbot Mode",
-            Content  = "Mode set to: " .. Option,
-            Duration = 2,
-        })
-    end,
-})
-
-FeaturesTab:CreateDropdown({
-    Name            = "👤  Target Player  (used in Target mode)",
-    Options         = (function()
-        local names = {}
-        for _, plr in pairs(Players:GetPlayers()) do
-            if plr ~= Players.LocalPlayer then
-                table.insert(names, plr.Name)
-            end
-        end
-        if #names == 0 then names = { "No players found" } end
-        return names
-    end)(),
-    CurrentOption   = { settings.aimbotTarget ~= "" and settings.aimbotTarget or "No players found" },
-    MultipleOptions = false,
-    Flag            = "AimbotTarget",
-    Callback        = function(Option)
-        if Option == "No players found" then return end
-        aimbotTarget         = Option
-        settings.aimbotTarget = Option
-        saveSettings()
-        Rayfield:Notify({
-            Title    = "Aimbot Target",
-            Content  = "Now targeting: " .. Option,
-            Duration = 2,
-        })
-    end,
-})
-
-FeaturesTab:CreateButton({
-    Name     = "🔄  Refresh Player List",
-    Callback = function()
-        local names = {}
-        for _, plr in pairs(Players:GetPlayers()) do
-            if plr ~= Players.LocalPlayer then
-                table.insert(names, plr.Name)
-            end
-        end
-        local list = #names > 0 and table.concat(names, ", ") or "No other players"
-        Rayfield:Notify({
-            Title    = "Players Online",
-            Content  = list .. "\n\nRe-execute the hub to reload the Target dropdown with updated players.",
-            Duration = 6,
-        })
-    end,
-})
-
-FeaturesTab:CreateButton({
-    Name     = "📍  Target TP  (teleport to selected target)",
-    Callback = function() doTargetTP() end,
-})
-
-FeaturesTab:CreateButton({
-    Name     = "💨  Target Fling  (fling selected target)",
-    Callback = function() doTargetFling() end,
-})
-
-FeaturesTab:CreateSection("NEW Features — Movement")
-
-FeaturesTab:CreateToggle({
-    Name         = "🪂  NoFall  (cap fall speed, no fall damage)",
-    CurrentValue = false,
-    Flag         = "NoFall",
-    Callback     = function(Value) setNoFallToggle(Value) end,
-})
-
-FeaturesTab:CreateToggle({
-    Name         = "🕷️  Wall Walk  (climb walls by walking into them)",
-    CurrentValue = false,
-    Flag         = "WallWalk",
-    Callback     = function(Value) setWallWalkToggle(Value) end,
-})
-
-FeaturesTab:CreateToggle({
-    Name         = "🚀  Zero Gravity  (float in 3D space, WASD to move)",
-    CurrentValue = false,
-    Flag         = "ZeroGravity",
-    Callback     = function(Value) setZeroGravToggle(Value) end,
-})
-
-FeaturesTab:CreateSection("NEW Features — Combat")
-
-FeaturesTab:CreateToggle({
-    Name         = "👻  NEW_AntiFling  (phase through other players)",
-    CurrentValue = false,
-    Flag         = "NewAntiFling",
-    Callback     = function(Value) setNewAntiFlingToggle(Value) end,
-})
-
-FeaturesTab:CreateSection("NEW Features — Server")
-
-FeaturesTab:CreateButton({
-    Name     = "🔄  Rejoin  (reconnect to this server)",
-    Callback = function() doRejoin() end,
-})
-
-FeaturesTab:CreateButton({
-    Name     = "🔀  Server Hop  (jump to a different server)",
-    Callback = function() doServerHop() end,
-})
-
-FeaturesTab:CreateSection("Settings")
-
-FeaturesTab:CreateButton({
-    Name     = "⌨️  Set Menu Key  (click → then press a key)",
-    Callback = function()
-        Rayfield:Notify({ Title = "Listening...", Content = "Press any keyboard key now.", Duration = 4 })
-        local conn
-        conn = UserInputService.InputBegan:Connect(function(input, gp)
-            if gp or input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-            menuKey              = input.KeyCode
-            settings.menuKey     = input.KeyCode.Name
-            saveSettings()
-            Rayfield:Notify({
-                Title    = "✅  Key Set",
-                Content  = "Menu key saved: " .. input.KeyCode.Name,
-                Duration = 3,
-            })
-            conn:Disconnect()
-        end)
-    end,
-})
-
-FeaturesTab:CreateButton({
-    Name     = "🗑  Reset All Settings to Default",
-    Callback = function()
-        settings.menuKey       = "LeftControl"
-        settings.ijEnabled     = false
-        settings.speedEnabled  = false
-        settings.speedVal      = 16
-        settings.spinEnabled   = false
-        settings.spinSpeedVal  = 20
-        settings.noclipEnabled = false
-        settings.flyEnabled    = false
-        settings.flySpeedVal   = 50
-        settings.espEnabled    = false
-        settings.hitboxEnabled = false
-        settings.hitboxSizeVal = 5
-        settings.flingEnabled  = false
-        settings.aimbotEnabled = false
-        settings.aimbotMode    = "Nearest"
-        settings.aimbotTarget  = ""
-        saveSettings()
-        setIJToggle(false)
-        setSpeedToggle(false)
-        setSpinToggle(false)
-        setNoclipToggle(false)
-        setFlyToggle(false)
-        setESPToggle(false)
-        setHitboxToggle(false)
-        setFlingToggle(false)
-        setAimbotToggle(false)
-        aimbotMode   = "Nearest"
-        aimbotTarget = ""
-        currentWalkSpeed = 16
-        Rayfield:Notify({ Title = "Reset", Content = "All settings reset to defaults.", Duration = 3 })
-    end,
-})
 
 -- ──────────────────────────────────────────────
 -- Kill Script  (full cleanup — nothing survives)
@@ -1386,6 +1369,7 @@ killScript = function()
     pcall(function() setWallWalkToggle(false) end)
     pcall(function() setZeroGravToggle(false) end)
     pcall(function() setNewAntiFlingToggle(false) end)
+    pcall(function() setFlingAllToggle(false) end)
 
     -- 2. Hard-restore the local character to a clean state
     pcall(function()
