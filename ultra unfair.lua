@@ -836,13 +836,52 @@ local function dragNPCToPlayer(npcRoot)
 end
 
 -- ─────────────────────────────────────────────────
---  Press E key (executor keypress/keyrelease)
+--  Press E — tries VirtualInputManager first (most
+--  reliable in Roblox), then executor keypress fallback
 -- ─────────────────────────────────────────────────
+local VIM = pcall(function() return game:GetService("VirtualInputManager") end) and game:GetService("VirtualInputManager") or nil
+
 local function pressE()
+    -- Method 1: VirtualInputManager (Roblox-native, no executor needed)
     pcall(function()
-        keypress(0x45)   -- 0x45 = virtual key code for E
-        task.wait(0.1)
-        keyrelease(0x45)
+        if VIM then
+            VIM:SendKeyEvent(true,  Enum.KeyCode.E, false, game)
+            task.wait(0.08)
+            VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+        end
+    end)
+    -- Method 2: executor keypress fallback
+    pcall(function()
+        if keypress then
+            keypress(0x45)
+            task.wait(0.08)
+            keyrelease(0x45)
+        end
+    end)
+end
+
+-- ─────────────────────────────────────────────────
+--  Disable grabbed NPC's scripts & movement so it
+--  cannot attack the player while being farmed
+-- ─────────────────────────────────────────────────
+local disabledNPCs = {}
+local function lockdownNPC(npcRoot)
+    if not npcRoot or not npcRoot.Parent then return end
+    if disabledNPCs[npcRoot] then return end
+    disabledNPCs[npcRoot] = true
+    pcall(function()
+        local model = npcRoot.Parent
+        -- Disable all server scripts so NPC logic stops
+        for _, s in ipairs(model:GetDescendants()) do
+            if s:IsA("Script") then s.Disabled = true end
+        end
+        -- Zero walkspeed + jump so it physically can't move to attack
+        local hum = model:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed  = 0
+            hum.JumpHeight = 0
+            hum.JumpPower  = 0
+        end
     end)
 end
 
@@ -887,8 +926,6 @@ end)
 
 -- ─────────────────────────────────────────────────
 --  ══ Heartbeat — per-frame ══
---  Drag locked NPC to player every frame so it
---  can never walk away. Also handles inf jump/speed.
 -- ─────────────────────────────────────────────────
 RunService.Heartbeat:Connect(function()
     if State.infJump then
@@ -901,6 +938,20 @@ RunService.Heartbeat:Connect(function()
 
     if State.speedEnabled then
         pcall(function() humanoid.WalkSpeed = State.speedValue end)
+    end
+
+    -- Invincible: keep health at max and block death state
+    if State.autoFarm or State.autoBoss then
+        pcall(function()
+            if humanoid.Health < humanoid.MaxHealth then
+                humanoid.Health = humanoid.MaxHealth
+            end
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+        end)
+    else
+        pcall(function()
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+        end)
     end
 
     -- Lock farm NPC in place right in front of player
@@ -935,10 +986,16 @@ task.spawn(function()
         -- ── AUTO FARM ──────────────────────────────
         if State.autoFarm then
             pcall(function()
-                if not farmTarget or not farmTarget.Parent
-                or not farmTarget.Parent:FindFirstChildOfClass("Humanoid")
-                or farmTarget.Parent:FindFirstChildOfClass("Humanoid").Health <= 0 then
+                local hum = farmTarget
+                    and farmTarget.Parent
+                    and farmTarget.Parent:FindFirstChildOfClass("Humanoid")
+                -- Only switch to a new NPC when current one is fully dead
+                if not hum or hum.Health <= 0 then
+                    disabledNPCs[farmTarget] = nil  -- clear lockdown for old target
                     farmTarget = getNearestNPC(false)
+                    if farmTarget then
+                        lockdownNPC(farmTarget)  -- disable new NPC's scripts & movement
+                    end
                 end
                 if farmTarget then
                     dragNPCToPlayer(farmTarget)
@@ -966,6 +1023,7 @@ task.spawn(function()
                     end
                 end
                 if best then
+                    lockdownNPC(best)
                     dragNPCToPlayer(best)
                     pcall(function()
                         rootPart.CFrame = CFrame.lookAt(rootPart.Position, best.Position)
@@ -978,10 +1036,14 @@ task.spawn(function()
         -- ── AUTO BOSS ──────────────────────────────
         if State.autoBoss then
             pcall(function()
-                if not auraTarget or not auraTarget.Parent
-                or not auraTarget.Parent:FindFirstChildOfClass("Humanoid")
-                or auraTarget.Parent:FindFirstChildOfClass("Humanoid").Health <= 0 then
+                local hum = auraTarget
+                    and auraTarget.Parent
+                    and auraTarget.Parent:FindFirstChildOfClass("Humanoid")
+                -- Only switch boss when current one is dead
+                if not hum or hum.Health <= 0 then
+                    disabledNPCs[auraTarget] = nil
                     auraTarget = getNearestNPC(true)
+                    if auraTarget then lockdownNPC(auraTarget) end
                 end
                 if auraTarget then
                     dragNPCToPlayer(auraTarget)
