@@ -998,6 +998,528 @@ local function doServerHop()
 end
 
 -- ──────────────────────────────────────────────
+-- SOURCE TAB FEATURES  (ported from Infinite Yield open source)
+-- None of these duplicate existing Home/Features tab items.
+-- ──────────────────────────────────────────────
+
+-- ── Float (platform pad under feet, Q/E to adjust height) ────────────────
+local iyFloatEnabled = false
+local iyFloatConn    = nil
+local iyFloatPart    = nil
+local iyFloatDied    = nil
+local iyFloatVal     = -3.1
+local iyFloatQU, iyFloatEU, iyFloatQD, iyFloatED
+
+local function stopFloat()
+    iyFloatEnabled = false
+    for _, c in pairs({ iyFloatConn, iyFloatQU, iyFloatEU, iyFloatQD, iyFloatED, iyFloatDied }) do
+        if c then pcall(function() c:Disconnect() end) end
+    end
+    iyFloatConn, iyFloatQU, iyFloatEU, iyFloatQD, iyFloatED, iyFloatDied = nil,nil,nil,nil,nil,nil
+    if iyFloatPart and iyFloatPart.Parent then iyFloatPart:Destroy() end
+    iyFloatPart = nil
+end
+
+local function startFloat()
+    stopFloat()
+    iyFloatEnabled = true
+    iyFloatVal = -3.1
+    local char = Players.LocalPlayer.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    local Float = Instance.new("Part")
+    Float.Name = "IYFloatPad" Float.Transparency = 1
+    Float.Size = Vector3.new(2, 0.2, 1.5) Float.Anchored = true Float.CanCollide = false
+    Float.Parent = char iyFloatPart = Float
+    iyFloatQD = UserInputService.InputBegan:Connect(function(i, g)
+        if g then return end
+        if i.KeyCode == Enum.KeyCode.Q then iyFloatVal = iyFloatVal - 0.5 end
+        if i.KeyCode == Enum.KeyCode.E then iyFloatVal = iyFloatVal + 1.5 end
+    end)
+    iyFloatQU = UserInputService.InputEnded:Connect(function(i)
+        if i.KeyCode == Enum.KeyCode.Q then iyFloatVal = iyFloatVal + 0.5 end
+        if i.KeyCode == Enum.KeyCode.E then iyFloatVal = iyFloatVal - 1.5 end
+    end)
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then iyFloatDied = hum.Died:Connect(function() stopFloat() end) end
+    iyFloatConn = RunService.Heartbeat:Connect(function()
+        local r = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if r and Float.Parent then Float.CFrame = r.CFrame * CFrame.new(0, iyFloatVal, 0)
+        else stopFloat() end
+    end)
+end
+
+local function setFloatToggle(state) if state then startFloat() else stopFloat() end end
+
+-- ── Swim (zero-gravity swim state) ────────────────────────────────────────
+local iySwimEnabled  = false
+local iySwimConn     = nil
+local iySwimDied     = nil
+local iyOrigGrav     = workspace.Gravity
+
+local function stopSwim()
+    iySwimEnabled = false
+    workspace.Gravity = iyOrigGrav
+    if iySwimConn then iySwimConn:Disconnect() iySwimConn = nil end
+    if iySwimDied then iySwimDied:Disconnect() iySwimDied = nil end
+    local char = Players.LocalPlayer.Character
+    local hum  = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        for _, v in pairs(Enum.HumanoidStateType:GetEnumItems()) do
+            if v ~= Enum.HumanoidStateType.None then
+                pcall(function() hum:SetStateEnabled(v, true) end)
+            end
+        end
+    end
+end
+
+local function startSwim()
+    stopSwim()
+    local char = Players.LocalPlayer.Character
+    local hum  = char and char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    iySwimEnabled = true iyOrigGrav = workspace.Gravity workspace.Gravity = 0
+    iySwimDied = hum.Died:Connect(function() workspace.Gravity = iyOrigGrav iySwimEnabled = false end)
+    for _, v in pairs(Enum.HumanoidStateType:GetEnumItems()) do
+        if v ~= Enum.HumanoidStateType.None then pcall(function() hum:SetStateEnabled(v, false) end) end
+    end
+    pcall(function() hum:ChangeState(Enum.HumanoidStateType.Swimming) end)
+    iySwimConn = RunService.Heartbeat:Connect(function()
+        local c = Players.LocalPlayer.Character
+        local r = c and c:FindFirstChild("HumanoidRootPart")
+        local h = c and c:FindFirstChildOfClass("Humanoid")
+        if r and h and h.MoveDirection == Vector3.new() then
+            r.Velocity = Vector3.new(0, 0, 0)
+        end
+    end)
+end
+
+local function setSwimToggle(state) if state then startSwim() else stopSwim() end end
+
+-- ── AntiVoid (prevent falling into void) ──────────────────────────────────
+local iyAntiVoidEnabled = false
+local iyAntiVoidConn    = nil
+local IY_DESTROY_HEIGHT = workspace.FallenPartsDestroyHeight
+
+local function setAntiVoidToggle(state)
+    iyAntiVoidEnabled = state
+    if state then
+        iyAntiVoidConn = RunService.Stepped:Connect(function()
+            local c = Players.LocalPlayer.Character
+            local r = c and c:FindFirstChild("HumanoidRootPart")
+            if r and r.Position.Y <= IY_DESTROY_HEIGHT + 25 then
+                r.Velocity = r.Velocity + Vector3.new(0, 250, 0)
+            end
+        end)
+    else
+        if iyAntiVoidConn then iyAntiVoidConn:Disconnect() iyAntiVoidConn = nil end
+    end
+end
+
+-- ── NoRotate ──────────────────────────────────────────────────────────────
+local iyNoRotateEnabled = false
+local function setNoRotateToggle(state)
+    iyNoRotateEnabled = state
+    local c = Players.LocalPlayer.Character
+    local h = c and c:FindFirstChildOfClass("Humanoid")
+    if h then h.AutoRotate = not state end
+end
+Players.LocalPlayer.CharacterAdded:Connect(function(c)
+    local h = c:WaitForChild("Humanoid")
+    if iyNoRotateEnabled then task.wait(0.2) h.AutoRotate = false end
+end)
+
+-- ── Stun (PlatformStand toggle) ───────────────────────────────────────────
+local iyStunEnabled = false
+local function setStunToggle(state)
+    iyStunEnabled = state
+    local c = Players.LocalPlayer.Character
+    local h = c and c:FindFirstChildOfClass("Humanoid")
+    if h then h.PlatformStand = state end
+end
+
+-- ── Body Fling (IY-style angular velocity self-fling) ─────────────────────
+-- IY spins your own body at 99999 rad/s so you bounce into and fling others.
+-- Different from WalkFling (which amplifies walking velocity).
+local iyBodyFlingEnabled = false
+
+local function stopBodyFling()
+    iyBodyFlingEnabled = false
+    setNoclipToggle(false)
+    local c = Players.LocalPlayer.Character
+    local r = c and c:FindFirstChild("HumanoidRootPart")
+    if r then
+        for _, v in pairs(r:GetChildren()) do
+            if v:IsA("BodyAngularVelocity") and v.Name == "IYBodyFling" then v:Destroy() end
+        end
+    end
+    if c then
+        for _, p in pairs(c:GetDescendants()) do
+            if p:IsA("BasePart") then
+                pcall(function() p.CustomPhysicalProperties = nil end)
+                pcall(function() p.Massless = false end)
+            end
+        end
+    end
+end
+
+local function startBodyFling()
+    if iyBodyFlingEnabled then return end
+    local c = Players.LocalPlayer.Character
+    local r = c and c:FindFirstChild("HumanoidRootPart")
+    if not r then return end
+    for _, p in pairs(c:GetDescendants()) do
+        if p:IsA("BasePart") then
+            pcall(function() p.CustomPhysicalProperties = PhysicalProperties.new(100, 0.3, 0.5) end)
+            pcall(function() p.CanCollide = false p.Massless = true end)
+        end
+    end
+    setNoclipToggle(true)
+    local bav = Instance.new("BodyAngularVelocity")
+    bav.Name = "IYBodyFling" bav.Parent = r
+    bav.MaxTorque = Vector3.new(0, math.huge, 0) bav.P = math.huge
+    bav.AngularVelocity = Vector3.new(0, 99999, 0)
+    iyBodyFlingEnabled = true
+    local hum = c:FindFirstChildOfClass("Humanoid")
+    if hum then hum.Died:Connect(function() stopBodyFling() end) end
+    task.spawn(function()
+        while iyBodyFlingEnabled do
+            if bav.Parent then
+                bav.AngularVelocity = Vector3.new(0, 99999, 0)
+                task.wait(0.2)
+                if iyBodyFlingEnabled then bav.AngularVelocity = Vector3.new(0, 0, 0) task.wait(0.1) end
+            else stopBodyFling() break end
+        end
+    end)
+end
+
+local function setBodyFlingToggle(state) if state then startBodyFling() else stopBodyFling() end end
+
+-- ── Reach (extend tool handle reach) ─────────────────────────────────────
+local iyReachEnabled = false
+local iyReachSize    = 60
+local iyOrigSize, iyOrigGrip = nil, nil
+
+local function stopReach()
+    iyReachEnabled = false
+    local c = Players.LocalPlayer.Character
+    if not c then return end
+    for _, v in pairs(c:GetDescendants()) do
+        if v:IsA("Tool") and v:FindFirstChild("Handle") then
+            if iyOrigSize then v.Handle.Size = iyOrigSize end
+            if iyOrigGrip  then v.GripPos    = iyOrigGrip  end
+            local sb = v.Handle:FindFirstChild("IYSelBox")
+            if sb then sb:Destroy() end
+        end
+    end
+    iyOrigSize = nil iyOrigGrip = nil
+end
+
+local function startReach(size)
+    stopReach()
+    iyReachSize = size or 60 iyReachEnabled = true
+    local c = Players.LocalPlayer.Character
+    if not c then return end
+    for _, v in pairs(c:GetDescendants()) do
+        if v:IsA("Tool") and v:FindFirstChild("Handle") then
+            iyOrigSize = v.Handle.Size iyOrigGrip = v.GripPos
+            local sb = Instance.new("SelectionBox")
+            sb.Name = "IYSelBox" sb.Adornee = v.Handle sb.Parent = v.Handle
+            v.Handle.Massless = true
+            v.Handle.Size = Vector3.new(0.5, 0.5, iyReachSize) v.GripPos = Vector3.new(0,0,0)
+            local hum = c:FindFirstChildOfClass("Humanoid")
+            if hum then pcall(function() hum:UnequipTools() end) end
+        end
+    end
+end
+
+local function setReachToggle(state) if state then startReach(iyReachSize) else stopReach() end end
+
+-- ── Autoclick ─────────────────────────────────────────────────────────────
+local iyAutoClickEnabled = false
+local iyAutoClickConn    = nil
+
+local function setAutoClickToggle(state)
+    iyAutoClickEnabled = state
+    if state then
+        iyAutoClickConn = RunService.Heartbeat:Connect(function()
+            pcall(function()
+                if mouse1click then
+                    mouse1click()
+                elseif mouse1press and mouse1release then
+                    mouse1press() mouse1release()
+                end
+            end)
+        end)
+    else
+        if iyAutoClickConn then iyAutoClickConn:Disconnect() iyAutoClickConn = nil end
+    end
+end
+
+-- ── Xray (make world parts semi-transparent) ─────────────────────────────
+local iyXrayEnabled = false
+local iyXrayConn    = nil
+local iyXrayOrig    = {}
+
+local function applyXray(on)
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") then
+            local inChar = false
+            local p = v.Parent
+            if p then
+                if p:FindFirstChildWhichIsA("Humanoid") then inChar = true end
+                if p.Parent and p.Parent:FindFirstChildWhichIsA("Humanoid") then inChar = true end
+            end
+            if not inChar then
+                pcall(function()
+                    if on then
+                        if iyXrayOrig[v] == nil then iyXrayOrig[v] = v.LocalTransparencyModifier end
+                        v.LocalTransparencyModifier = 0.75
+                    else
+                        v.LocalTransparencyModifier = (iyXrayOrig[v] ~= nil) and iyXrayOrig[v] or 0
+                    end
+                end)
+            end
+        end
+    end
+    if not on then iyXrayOrig = {} end
+end
+
+local function setXrayToggle(state)
+    iyXrayEnabled = state
+    if iyXrayConn then iyXrayConn:Disconnect() iyXrayConn = nil end
+    if state then
+        applyXray(true)
+        iyXrayConn = RunService.RenderStepped:Connect(function() applyXray(true) end)
+    else
+        applyXray(false)
+    end
+end
+
+-- ── HoverName (show player name when mousing over their character) ─────────
+local iyHoverEnabled = false
+local iyHoverGui     = nil
+local iyHoverConn    = nil
+
+local function stopHoverName()
+    iyHoverEnabled = false
+    if iyHoverConn then iyHoverConn:Disconnect() iyHoverConn = nil end
+    if iyHoverGui and iyHoverGui.Parent then iyHoverGui:Destroy() iyHoverGui = nil end
+end
+
+local function startHoverName()
+    stopHoverName()
+    iyHoverEnabled = true
+    local SGui = Instance.new("ScreenGui")
+    SGui.Name = "IYHoverName" SGui.ResetOnSpawn = false
+    SGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    SGui.Parent = player:WaitForChild("PlayerGui")
+    iyHoverGui = SGui
+    local lbl = Instance.new("TextLabel")
+    lbl.BackgroundTransparency = 1 lbl.Size = UDim2.new(0, 220, 0, 30)
+    lbl.Font = Enum.Font.Code lbl.TextSize = 16 lbl.Text = ""
+    lbl.TextColor3 = Color3.new(1,1,1) lbl.TextStrokeTransparency = 0
+    lbl.ZIndex = 10 lbl.Visible = false lbl.Parent = SGui
+    local selBox = Instance.new("SelectionBox")
+    selBox.LineThickness = 0.03 selBox.Color3 = Color3.new(1,1,1) selBox.Parent = SGui
+    local mouse = player:GetMouse()
+    iyHoverConn = mouse.Move:Connect(function()
+        local t = mouse.Target
+        if t then
+            local hum = t.Parent:FindFirstChildWhichIsA("Humanoid")
+                     or t.Parent.Parent:FindFirstChildWhichIsA("Humanoid")
+            if hum then
+                local x, y = mouse.X, mouse.Y
+                lbl.Position = UDim2.new(0, x > 220 and x - 225 or x + 10, 0, y)
+                lbl.Text = hum.Parent.Name lbl.Visible = true
+                selBox.Adornee = hum.Parent return
+            end
+        end
+        lbl.Visible = false selBox.Adornee = nil
+    end)
+end
+
+local function setHoverNameToggle(state) if state then startHoverName() else stopHoverName() end end
+
+-- ── Character Light ───────────────────────────────────────────────────────
+local iyLightEnabled = false
+local iyLightObj     = nil
+
+local function setLightToggle(state)
+    iyLightEnabled = state
+    if iyLightObj and iyLightObj.Parent then iyLightObj:Destroy() iyLightObj = nil end
+    if state then
+        local c = Players.LocalPlayer.Character
+        local r = c and c:FindFirstChild("HumanoidRootPart")
+        if r then
+            local pl = Instance.new("PointLight")
+            pl.Brightness = 5 pl.Range = 20 pl.Parent = r iyLightObj = pl
+        end
+    end
+end
+Players.LocalPlayer.CharacterAdded:Connect(function(c)
+    local r = c:WaitForChild("HumanoidRootPart")
+    if iyLightEnabled then
+        task.wait(0.3)
+        if iyLightObj and iyLightObj.Parent then iyLightObj:Destroy() end
+        local pl = Instance.new("PointLight")
+        pl.Brightness = 5 pl.Range = 20 pl.Parent = r iyLightObj = pl
+    end
+end)
+
+-- ── Naked / NoFace / ClearHats ────────────────────────────────────────────
+local function doNaked()
+    local c = Players.LocalPlayer.Character
+    if not c then return end
+    for _, v in pairs(c:GetDescendants()) do
+        if v:IsA("Clothing") or v:IsA("ShirtGraphic") then v:Destroy() end
+    end
+end
+
+local function doNoFace()
+    local c = Players.LocalPlayer.Character
+    if not c then return end
+    for _, v in pairs(c:GetDescendants()) do
+        if v:IsA("Decal") and v.Name:lower() == "face" then v:Destroy() end
+    end
+end
+
+local function doClearHats()
+    local c = Players.LocalPlayer.Character
+    if not c then return end
+    local h = c:FindFirstChildOfClass("Humanoid")
+    if h then for _, a in pairs(h:GetAccessories()) do a:Destroy() end end
+end
+
+-- ── HatSpin (spin accessories around head) ────────────────────────────────
+local iyHatSpinEnabled = false
+local iyHatSpinConn    = nil
+
+local function stopHatSpin()
+    iyHatSpinEnabled = false
+    if iyHatSpinConn then iyHatSpinConn:Disconnect() iyHatSpinConn = nil end
+end
+
+local function startHatSpin(speed)
+    stopHatSpin()
+    speed = speed or 100 iyHatSpinEnabled = true
+    local c = Players.LocalPlayer.Character
+    local h = c and c:FindFirstChildOfClass("Humanoid")
+    if not h then return end
+    for _, acc in pairs(h:GetAccessories()) do
+        local handle = acc:FindFirstChild("Handle")
+        if handle then
+            local w = handle:FindFirstChildWhichIsA("Weld")
+            if w then pcall(function() w:Destroy() end) end
+            local bp = Instance.new("BodyPosition")
+            bp.P = 30000 bp.D = 50 bp.Parent = handle
+            local bav = Instance.new("BodyAngularVelocity")
+            bav.AngularVelocity = Vector3.new(0, speed, 0)
+            bav.MaxTorque = Vector3.new(0, speed * 2, 0) bav.Parent = handle
+        end
+    end
+    iyHatSpinConn = RunService.Stepped:Connect(function()
+        local ch = Players.LocalPlayer.Character
+        local head = ch and ch:FindFirstChild("Head")
+        local hum2 = ch and ch:FindFirstChildOfClass("Humanoid")
+        if head and hum2 then
+            for _, acc in pairs(hum2:GetAccessories()) do
+                local handle = acc:FindFirstChild("Handle")
+                local bpInst = handle and handle:FindFirstChildOfClass("BodyPosition")
+                if bpInst then pcall(function() bpInst.Position = head.Position end) end
+            end
+        end
+    end)
+end
+
+local function setHatSpinToggle(state) if state then startHatSpin(100) else stopHatSpin() end end
+
+-- ── Flashback (TP to last death position) ─────────────────────────────────
+local iyLastDeath = nil
+Players.LocalPlayer.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid")
+    hum.Died:Connect(function()
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if root then iyLastDeath = root.CFrame end
+    end)
+end)
+
+local function doFlashback()
+    if not iyLastDeath then
+        Rayfield:Notify({ Title = "Flashback", Content = "No death position recorded yet.", Duration = 3 })
+        return
+    end
+    local c = Players.LocalPlayer.Character
+    local r = c and c:FindFirstChild("HumanoidRootPart")
+    if r then r.CFrame = iyLastDeath Rayfield:Notify({ Title = "Flashback", Content = "Teleported to last death position.", Duration = 3 }) end
+end
+
+-- ── Server Info ───────────────────────────────────────────────────────────
+local function doServerInfo()
+    local ok, ping = pcall(function() return Players:GetNetworkPing() end)
+    local pingStr  = (ok and ping) and string.format("%.0fms", ping * 1000) or "N/A"
+    local pid  = tostring(game.PlaceId)
+    local jid  = game.JobId:sub(1, 16) .. "..."
+    local cnt  = #Players:GetPlayers()
+    local mx   = Players.MaxPlayers
+    Rayfield:Notify({
+        Title   = "Server Info",
+        Content = "PlaceId: " .. pid .. "\nPlayers: " .. cnt .. "/" .. mx
+               .. "\nPing: " .. pingStr .. "\nJobId: " .. jid,
+        Duration = 8,
+    })
+end
+
+-- ── AutoRejoin ────────────────────────────────────────────────────────────
+local iyAutoRejoinEnabled = false
+local iyAutoRejoinConn    = nil
+
+local function setAutoRejoinToggle(state)
+    iyAutoRejoinEnabled = state
+    if iyAutoRejoinConn then iyAutoRejoinConn:Disconnect() iyAutoRejoinConn = nil end
+    if state then
+        pcall(function()
+            iyAutoRejoinConn = game:GetService("GuiService"):GetPropertyChangedSignal("ErrorMessage"):Connect(function()
+                if game:GetService("GuiService").ErrorMessage ~= "" then
+                    task.delay(0.5, doRejoin)
+                end
+            end)
+        end)
+        Rayfield:Notify({ Title = "Auto Rejoin", Content = "Will rejoin on disconnect.", Duration = 3 })
+    end
+end
+
+-- ── Day / Night / NoFog ───────────────────────────────────────────────────
+local function doDay()
+    Lighting.ClockTime = 14 Lighting.Brightness = 2 Lighting.GlobalShadows = true
+    Rayfield:Notify({ Title = "Lighting", Content = "Set to Day.", Duration = 2 })
+end
+
+local function doNight()
+    Lighting.ClockTime = 0 Lighting.Brightness = 0 Lighting.GlobalShadows = false
+    Rayfield:Notify({ Title = "Lighting", Content = "Set to Night.", Duration = 2 })
+end
+
+local iyNoFogEnabled = false
+local iyNoFogConn    = nil
+
+local function setNoFogToggle(state)
+    iyNoFogEnabled = state
+    if iyNoFogConn then iyNoFogConn:Disconnect() iyNoFogConn = nil end
+    if state then
+        Lighting.FogEnd = 100000 Lighting.FogStart = 100000
+        iyNoFogConn = RunService.RenderStepped:Connect(function()
+            Lighting.FogEnd = 100000 Lighting.FogStart = 100000
+        end)
+        Rayfield:Notify({ Title = "No Fog", Content = "Fog removed.", Duration = 2 })
+    else
+        Lighting.FogEnd   = origLighting.FogEnd
+        Lighting.FogStart = origLighting.FogStart
+    end
+end
+
+-- ──────────────────────────────────────────────
 -- Kill Script  (forward declaration — assigned after all features)
 -- ──────────────────────────────────────────────
 local killScript
@@ -1504,6 +2026,208 @@ ExecutorTab:CreateButton({
     end,
 })
 
+-- ──────────────────────────────────────────────
+-- Source Tab  (Infinite Yield open-source features)
+-- Organised into sections; nothing here duplicates existing tabs.
+-- Overlapping features (noclip, fly, speed, spin, hitbox, walkfling,
+-- fullbright, esp, aimbot, serverhop, rejoin) are kept in the Home tab
+-- where our implementations are equivalent or better.
+-- ──────────────────────────────────────────────
+local SourceTab = Window:CreateTab("Source", 4483362458)
+
+-- ─── Movement (IY) ─────────────────────────────────────────────────────────
+SourceTab:CreateSection("Movement (IY)")
+
+SourceTab:CreateToggle({
+    Name         = "🪂  Float  (Q = lower · E = raise)",
+    CurrentValue = false,
+    Flag         = "IYFloat",
+    Callback     = function(Value) setFloatToggle(Value) end,
+})
+
+SourceTab:CreateToggle({
+    Name         = "🌊  Swim  (zero-gravity swim state)",
+    CurrentValue = false,
+    Flag         = "IYSwim",
+    Callback     = function(Value) setSwimToggle(Value) end,
+})
+
+SourceTab:CreateToggle({
+    Name         = "🛡  Anti-Void  (survive falling into void)",
+    CurrentValue = false,
+    Flag         = "IYAntiVoid",
+    Callback     = function(Value) setAntiVoidToggle(Value) end,
+})
+
+SourceTab:CreateToggle({
+    Name         = "🔄  No AutoRotate  (lock facing direction)",
+    CurrentValue = false,
+    Flag         = "IYNoRotate",
+    Callback     = function(Value) setNoRotateToggle(Value) end,
+})
+
+SourceTab:CreateToggle({
+    Name         = "💤  Stun  (PlatformStand — freeze in place)",
+    CurrentValue = false,
+    Flag         = "IYStun",
+    Callback     = function(Value) setStunToggle(Value) end,
+})
+
+-- ─── Combat (IY) ───────────────────────────────────────────────────────────
+SourceTab:CreateSection("Combat (IY)")
+
+SourceTab:CreateParagraph({
+    Title   = "Body Fling vs WalkFling",
+    Content = "WalkFling (Home tab) amplifies your walking velocity.\n"
+           .. "Body Fling (below) spins your body at max angular velocity — "
+           .. "anything you touch gets flung. Both can be used together.",
+})
+
+SourceTab:CreateToggle({
+    Name         = "🌀  Body Fling  (spin + physics fling on contact)",
+    CurrentValue = false,
+    Flag         = "IYBodyFling",
+    Callback     = function(Value) setBodyFlingToggle(Value) end,
+})
+
+SourceTab:CreateToggle({
+    Name         = "🔧  Reach  (stretch tool handle · equip tool first)",
+    CurrentValue = false,
+    Flag         = "IYReach",
+    Callback     = function(Value) setReachToggle(Value) end,
+})
+
+SourceTab:CreateSlider({
+    Name         = "🔧  Reach Size",
+    Range        = { 5, 200 },
+    Increment    = 5,
+    Suffix       = " studs",
+    CurrentValue = 60,
+    Flag         = "IYReachSize",
+    Callback     = function(Value)
+        iyReachSize = Value
+        if iyReachEnabled then startReach(Value) end
+    end,
+})
+
+SourceTab:CreateToggle({
+    Name         = "🖱  Auto Click  (rapid mouse1 clicks)",
+    CurrentValue = false,
+    Flag         = "IYAutoClick",
+    Callback     = function(Value) setAutoClickToggle(Value) end,
+})
+
+-- ─── Visual (IY) ───────────────────────────────────────────────────────────
+SourceTab:CreateSection("Visual (IY)")
+
+SourceTab:CreateParagraph({
+    Title   = "Xray vs ESP",
+    Content = "ESP (Home tab) adds name tags + highlight on players.\n"
+           .. "Xray (below) makes all world geometry semi-transparent "
+           .. "so you can see players and items through walls.",
+})
+
+SourceTab:CreateToggle({
+    Name         = "🔍  Xray  (see through walls · world geometry)",
+    CurrentValue = false,
+    Flag         = "IYXray",
+    Callback     = function(Value) setXrayToggle(Value) end,
+})
+
+SourceTab:CreateToggle({
+    Name         = "🏷  Hover Name  (show player name under cursor)",
+    CurrentValue = false,
+    Flag         = "IYHoverName",
+    Callback     = function(Value) setHoverNameToggle(Value) end,
+})
+
+SourceTab:CreateToggle({
+    Name         = "💡  Character Light  (point light on your character)",
+    CurrentValue = false,
+    Flag         = "IYLight",
+    Callback     = function(Value) setLightToggle(Value) end,
+})
+
+-- ─── Character (IY) ────────────────────────────────────────────────────────
+SourceTab:CreateSection("Character (IY)")
+
+SourceTab:CreateButton({
+    Name     = "👕  Naked  (remove shirt / pants / graphic tee)",
+    Callback = function()
+        doNaked()
+        Rayfield:Notify({ Title = "Naked", Content = "Clothing removed from character.", Duration = 2 })
+    end,
+})
+
+SourceTab:CreateButton({
+    Name     = "😶  No Face  (remove face decal)",
+    Callback = function()
+        doNoFace()
+        Rayfield:Notify({ Title = "No Face", Content = "Face decal removed.", Duration = 2 })
+    end,
+})
+
+SourceTab:CreateButton({
+    Name     = "🎩  Clear Hats  (remove all accessories)",
+    Callback = function()
+        doClearHats()
+        Rayfield:Notify({ Title = "Clear Hats", Content = "All accessories removed.", Duration = 2 })
+    end,
+})
+
+SourceTab:CreateToggle({
+    Name         = "🎩  Hat Spin  (spin accessories around your head)",
+    CurrentValue = false,
+    Flag         = "IYHatSpin",
+    Callback     = function(Value) setHatSpinToggle(Value) end,
+})
+
+SourceTab:CreateButton({
+    Name     = "💀  Flashback  (TP to where you last died)",
+    Callback = function() doFlashback() end,
+})
+
+-- ─── Lighting (IY) ─────────────────────────────────────────────────────────
+SourceTab:CreateSection("Lighting (IY)")
+
+SourceTab:CreateParagraph({
+    Title   = "Full Bright vs Day/Night",
+    Content = "Full Bright (Home tab) maxes brightness + removes all effects.\n"
+           .. "Day/Night (below) only change the time of day — effects stay.",
+})
+
+SourceTab:CreateButton({
+    Name     = "☀  Day  (set ClockTime to midday)",
+    Callback = function() doDay() end,
+})
+
+SourceTab:CreateButton({
+    Name     = "🌙  Night  (set ClockTime to midnight)",
+    Callback = function() doNight() end,
+})
+
+SourceTab:CreateToggle({
+    Name         = "🌫  No Fog  (remove all atmospheric fog)",
+    CurrentValue = false,
+    Flag         = "IYNoFog",
+    Callback     = function(Value) setNoFogToggle(Value) end,
+})
+
+-- ─── Server (IY) ───────────────────────────────────────────────────────────
+SourceTab:CreateSection("Server (IY)")
+
+SourceTab:CreateButton({
+    Name     = "ℹ  Server Info  (PlaceId · JobId · players · ping)",
+    Callback = function() doServerInfo() end,
+})
+
+SourceTab:CreateToggle({
+    Name         = "🔄  Auto Rejoin  (rejoin automatically on disconnect)",
+    CurrentValue = false,
+    Flag         = "IYAutoRejoin",
+    Callback     = function(Value) setAutoRejoinToggle(Value) end,
+})
+
 
 -- ──────────────────────────────────────────────
 -- Kill Script  (full cleanup — nothing survives)
@@ -1529,6 +2253,21 @@ killScript = function()
     pcall(function() setNewAntiFlingToggle(false) end)
     pcall(function() setFlingAllToggle(false) end)
     pcall(function() stopTweenTP(false) end)
+    -- IY Source tab features
+    pcall(function() setFloatToggle(false) end)
+    pcall(function() setSwimToggle(false) end)
+    pcall(function() setAntiVoidToggle(false) end)
+    pcall(function() setNoRotateToggle(false) end)
+    pcall(function() setStunToggle(false) end)
+    pcall(function() setBodyFlingToggle(false) end)
+    pcall(function() setReachToggle(false) end)
+    pcall(function() setAutoClickToggle(false) end)
+    pcall(function() setXrayToggle(false) end)
+    pcall(function() stopHoverName() end)
+    pcall(function() setLightToggle(false) end)
+    pcall(function() stopHatSpin() end)
+    pcall(function() setAutoRejoinToggle(false) end)
+    pcall(function() setNoFogToggle(false) end)
 
     -- 2. Hard-restore the local character to a clean state
     pcall(function()
@@ -1568,15 +2307,17 @@ killScript = function()
         end
     end)
 
-    -- 4. Destroy the floating N button via the global reference
+    -- 4. Destroy the floating N button + any IY overlay GUIs
     pcall(function()
         if _floatGui and _floatGui.Parent then
             _floatGui:Destroy()
             _floatGui = nil
         end
-        -- Fallback: search by name
-        local nb = player:WaitForChild("PlayerGui"):FindFirstChild("USHFloatBtn")
+        local pg = player:WaitForChild("PlayerGui")
+        local nb = pg:FindFirstChild("USHFloatBtn")
         if nb then nb:Destroy() end
+        local hn = pg:FindFirstChild("IYHoverName")
+        if hn then hn:Destroy() end
     end)
 
     -- 5. Destroy Rayfield — check both PlayerGui and CoreGui
