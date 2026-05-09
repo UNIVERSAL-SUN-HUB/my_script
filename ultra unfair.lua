@@ -590,13 +590,9 @@ end
 -- ─────────────────────────────────────────────────
 makeDivider(pageFarm, "Auto Farm", 1)
 
-local setAutoFarmToggle = makeToggle(pageFarm, "Auto Farm", "Toggle with L key — drags NPC & holds M1 on it", 2, function(v)
+local setAutoFarmToggle = makeToggle(pageFarm, "Auto Farm", "Toggle with L key — TP enemy NPC to you & attack", 2, function(v)
     State.autoFarm = v
-    if not v then
-        -- release M1 when turning off so mouse is freed
-        pcall(function() if mouse1release then mouse1release() end end)
-        farmTarget = nil
-    end
+    if not v then farmTarget = nil end
     toast(v and "Auto Farm ON  (L to stop)" or "Auto Farm OFF")
 end)
 
@@ -797,78 +793,42 @@ local auraTarget = nil
 local Camera     = workspace.CurrentCamera
 
 -- ─────────────────────────────────────────────────
---  Aim mouse at exact world position on screen
---  so M1 always lands on the NPC body, never misfires
+--  Shop / peaceful NPC filter
+--  Returns true if the model should be SKIPPED
+--  (vendors, quest givers, spawn NPCs, etc.)
 -- ─────────────────────────────────────────────────
-local function aimMouseAt(worldPos)
-    pcall(function()
-        local screenPos, onScreen = Camera:WorldToScreenPoint(worldPos)
-        if onScreen then
-            -- Move the executor mouse to that exact screen pixel
-            if mousemoveabs then
-                mousemoveabs(screenPos.X, screenPos.Y)
-            elseif mousemoverel then
-                -- relative fallback: delta from screen centre
-                local cx = Camera.ViewportSize.X / 2
-                local cy = Camera.ViewportSize.Y / 2
-                mousemoverel(screenPos.X - cx, screenPos.Y - cy)
-            end
-        end
-    end)
+local SKIP_KEYWORDS = {
+    "shop","vendor","merchant","trader","seller","npc",
+    "quest","spawn","dummy","mannequin","tutorial","guide",
+    "blacksmith","bank","heal","doctor","inn","keeper","master"
+}
+local function isShopNPC(model)
+    if not model then return true end
+    -- Has a ProximityPrompt = interactable / shop NPC
+    if model:FindFirstChildWhichIsA("ProximityPrompt", true) then return true end
+    -- Check model name and its parent folder name
+    local name = model.Name:lower()
+    local parentName = (model.Parent and model.Parent.Name or ""):lower()
+    for _, kw in ipairs(SKIP_KEYWORDS) do
+        if name:find(kw) or parentName:find(kw) then return true end
+    end
+    -- If the NPC is inside a folder literally called "NPCs" or "Characters"
+    -- but NOT "Enemies" / "Mobs" — skip it
+    if model.Parent and model.Parent:IsA("Folder") then
+        local fn = model.Parent.Name:lower()
+        if fn:find("npc") or fn:find("vendor") or fn:find("shop") then return true end
+    end
+    return false
 end
 
 -- ─────────────────────────────────────────────────
---  Hold M1 continuously at NPC position
---  (game sees a real, uninterrupted left-click hold)
--- ─────────────────────────────────────────────────
-local m1Held = false
-local function startHoldM1()
-    if m1Held then return end
-    m1Held = true
-    pcall(function()
-        if mouse1press then mouse1press()
-        elseif mouse1click then mouse1click() end
-    end)
-    -- Also activate tool so ability fires on hold
-    pcall(function()
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then tool:Activate() end
-    end)
-end
-
-local function stopHoldM1()
-    if not m1Held then return end
-    m1Held = false
-    pcall(function()
-        if mouse1release then mouse1release() end
-    end)
-end
-
--- Re-press M1 rapidly (for games that need repeated clicks not hold)
-local function clickM1()
-    pcall(function()
-        if mouse1click then
-            mouse1click()
-        elseif mouse1press then
-            mouse1press()
-            task.wait()
-            mouse1release()
-        end
-    end)
-    pcall(function()
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then tool:Activate() end
-    end)
-end
-
--- ─────────────────────────────────────────────────
---  Drag NPC to player — locks NPC directly in front
---  of player every frame; zeros velocity so it
---  cannot walk or slide away at all
+--  Freeze & drag NPC directly to player each frame
+--  so it cannot walk, slide, or escape
 -- ─────────────────────────────────────────────────
 local function dragNPCToPlayer(npcRoot)
     if not npcRoot or not npcRoot.Parent then return end
     pcall(function()
+        -- Place NPC 3 studs in front of the player
         npcRoot.CFrame = rootPart.CFrame * CFrame.new(0, 0, -3)
         npcRoot.AssemblyLinearVelocity  = Vector3.zero
         npcRoot.AssemblyAngularVelocity = Vector3.zero
@@ -876,33 +836,69 @@ local function dragNPCToPlayer(npcRoot)
 end
 
 -- ─────────────────────────────────────────────────
---  Find nearest NPC / Boss
+--  Get all BaseParts that belong to enemy humanoids
+--  AND are within distance + visible in the viewport
+--  (matches the logic from your provided snippet)
 -- ─────────────────────────────────────────────────
-local function getNearestNPC(maxHp)
-    local best, bestDist = nil, math.huge
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 then
-            local rp = v.Parent:FindFirstChild("HumanoidRootPart")
-            if rp then
-                local ok = (maxHp == nil) or (v.MaxHealth <= maxHp)
-                if ok then
-                    local d = (rp.Position - rootPart.Position).Magnitude
-                    if d < bestDist then bestDist = d; best = rp end
+local function getEnemyPartsInViewport(range)
+    local result = {}
+    for _, part in ipairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") and part.Parent ~= char then
+            local dist = player:DistanceFromCharacter(part.Position)
+            if dist <= range then
+                local _, isVisible = Camera:WorldToViewportPoint(part.Position)
+                if isVisible then
+                    local hum = part.Parent:FindFirstChildWhichIsA("Humanoid")
+                    if hum and hum.Health > 0 and not isShopNPC(part.Parent) then
+                        table.insert(result, part)
+                    end
                 end
             end
         end
     end
-    return best
+    return result
 end
 
-local function getNearestBoss()
+-- ─────────────────────────────────────────────────
+--  firetouchinterest attack
+--  Activates the tool and fires touch events on
+--  every enemy part in viewport — server registers
+--  real damage and gives full rewards
+-- ─────────────────────────────────────────────────
+local FARM_RANGE = 20   -- studs — adjust if needed
+
+local function fireTouchAttack(range)
+    local tool = char:FindFirstChildOfClass("Tool")
+    if not tool then return end
+    local handle = tool:FindFirstChild("Handle")
+    if not handle then return end
+
+    local parts = getEnemyPartsInViewport(range or FARM_RANGE)
+    for _, part in ipairs(parts) do
+        pcall(function()
+            tool:Activate()
+            firetouchinterest(handle, part, 0)
+            firetouchinterest(handle, part, 1)
+        end)
+    end
+end
+
+-- ─────────────────────────────────────────────────
+--  Find nearest ENEMY NPC / Boss (shop NPCs skipped)
+-- ─────────────────────────────────────────────────
+local function getNearestNPC(bossOnly)
     local best, bestDist = nil, math.huge
     for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 and v.MaxHealth > 5000 then
-            local rp = v.Parent:FindFirstChild("HumanoidRootPart")
-            if rp then
-                local d = (rp.Position - rootPart.Position).Magnitude
-                if d < bestDist then bestDist = d; best = rp end
+        if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 then
+            if not isShopNPC(v.Parent) then
+                local rp = v.Parent:FindFirstChild("HumanoidRootPart")
+                if rp then
+                    local hpOk = bossOnly and (v.MaxHealth > 5000) or true
+                    if hpOk then
+                        local d = (rp.Position - rootPart.Position).Magnitude
+                        if d < bestDist then bestDist = d; best = rp end
+                    end
+                end
             end
         end
     end
@@ -915,27 +911,23 @@ end
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.L then
-        -- flip the state and drive the UI toggle
         local newVal = not State.autoFarm
         if setAutoFarmToggle then
             setAutoFarmToggle(newVal)
         else
             State.autoFarm = newVal
-            if not newVal then stopHoldM1(); farmTarget = nil end
+            if not newVal then farmTarget = nil end
         end
         toast(newVal and "Auto Farm ON  (L to stop)" or "Auto Farm OFF")
     end
 end)
 
 -- ─────────────────────────────────────────────────
---  ══ Heartbeat — per-frame work ══
---  1. Inf jump / speed
---  2. Drag NPC to player (position lock)
---  3. Aim mouse at exact NPC screen point so
---     the held M1 never drifts off target
+--  ══ Heartbeat — per-frame ══
+--  Drag locked NPC to player every frame so it
+--  can never walk away. Also handles inf jump/speed.
 -- ─────────────────────────────────────────────────
 RunService.Heartbeat:Connect(function()
-    -- Infinite jump
     if State.infJump then
         pcall(function()
             if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
@@ -944,82 +936,70 @@ RunService.Heartbeat:Connect(function()
         end)
     end
 
-    -- Speed persistence
     if State.speedEnabled then
         pcall(function() humanoid.WalkSpeed = State.speedValue end)
     end
 
-    -- Auto Farm: drag NPC to player AND keep mouse pinned on its chest
+    -- Lock farm NPC in place right in front of player
     if State.autoFarm and farmTarget and farmTarget.Parent
     and farmTarget.Parent:FindFirstChildOfClass("Humanoid")
     and farmTarget.Parent:FindFirstChildOfClass("Humanoid").Health > 0 then
         dragNPCToPlayer(farmTarget)
-        -- Aim at chest level (slightly above root centre)
-        local chestPos = farmTarget.Position + Vector3.new(0, 0.5, 0)
-        aimMouseAt(chestPos)
-        -- Keep character facing the NPC
         pcall(function()
             rootPart.CFrame = CFrame.lookAt(rootPart.Position, farmTarget.Position)
         end)
-    elseif State.autoFarm then
-        -- Target gone — release M1 briefly so game re-registers next press
-        stopHoldM1()
     end
 
-    -- Auto Boss: same drag + aim logic
+    -- Lock boss NPC in place
     if State.autoBoss and auraTarget and auraTarget.Parent
     and auraTarget.Parent:FindFirstChildOfClass("Humanoid")
     and auraTarget.Parent:FindFirstChildOfClass("Humanoid").Health > 0 then
         dragNPCToPlayer(auraTarget)
-        aimMouseAt(auraTarget.Position + Vector3.new(0, 0.5, 0))
         pcall(function()
             rootPart.CFrame = CFrame.lookAt(rootPart.Position, auraTarget.Position)
         end)
-    elseif State.autoBoss then
-        stopHoldM1()
     end
 end)
 
 -- ─────────────────────────────────────────────────
---  ══ Combat loop — 0.06s tick ══
---  Manages target selection and M1 hold/click.
---  Mouse is already aimed at the NPC by Heartbeat;
---  this loop just ensures M1 stays pressed and
---  re-clicks every tick for games that need it.
+--  ══ Combat loop ══
+--  Uses firetouchinterest on enemy parts in viewport
+--  — game registers real damage + gives full rewards.
+--  No mouse clicks, no hitbox changes, no misclicks.
 -- ─────────────────────────────────────────────────
 task.spawn(function()
-    while task.wait(0.06) do
+    while task.wait() do   -- task.wait() = ~1/30s, fast but not spammy
 
         -- ── AUTO FARM ──────────────────────────────
         if State.autoFarm then
             pcall(function()
-                -- Refresh dead/gone target
+                -- Refresh target when dead or gone
                 if not farmTarget or not farmTarget.Parent
                 or not farmTarget.Parent:FindFirstChildOfClass("Humanoid")
                 or farmTarget.Parent:FindFirstChildOfClass("Humanoid").Health <= 0 then
-                    stopHoldM1()
-                    farmTarget = getNearestNPC(8000)
+                    farmTarget = getNearestNPC(false)
                 end
 
                 if farmTarget then
-                    -- Hold M1 continuously (game sees unbroken left-click on NPC)
-                    startHoldM1()
-                    -- Also send a discrete click each tick for combo-based games
-                    clickM1()
+                    -- Drag the NPC to us (Heartbeat also does this, double coverage)
+                    dragNPCToPlayer(farmTarget)
+                    -- Attack with firetouchinterest on all its parts in view
+                    fireTouchAttack(FARM_RANGE)
                 end
             end)
+
         else
-            stopHoldM1()
             farmTarget = nil
         end
 
         -- ── KILL AURA ──────────────────────────────
-        -- Drag nearest in-range NPC to player, aim precisely, click M1
+        -- Drag nearest in-range enemy to player and attack
         if State.killAura then
             pcall(function()
                 local best, bestDist = nil, math.huge
                 for _, v in ipairs(workspace:GetDescendants()) do
-                    if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 then
+                    if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0
+                    and not isShopNPC(v.Parent) then
                         local rp = v.Parent:FindFirstChild("HumanoidRootPart")
                         if rp then
                             local d = (rp.Position - rootPart.Position).Magnitude
@@ -1031,11 +1011,10 @@ task.spawn(function()
                 end
                 if best then
                     dragNPCToPlayer(best)
-                    aimMouseAt(best.Position + Vector3.new(0, 0.5, 0))
                     pcall(function()
                         rootPart.CFrame = CFrame.lookAt(rootPart.Position, best.Position)
                     end)
-                    clickM1()
+                    fireTouchAttack(State.killAuraRange)
                 end
             end)
         end
@@ -1046,18 +1025,15 @@ task.spawn(function()
                 if not auraTarget or not auraTarget.Parent
                 or not auraTarget.Parent:FindFirstChildOfClass("Humanoid")
                 or auraTarget.Parent:FindFirstChildOfClass("Humanoid").Health <= 0 then
-                    stopHoldM1()
-                    auraTarget = getNearestBoss()
+                    auraTarget = getNearestNPC(true)   -- bossOnly = true
                 end
                 if auraTarget then
-                    startHoldM1()
-                    clickM1()
+                    dragNPCToPlayer(auraTarget)
+                    fireTouchAttack(FARM_RANGE)
                 end
             end)
         else
-            if State.autoBoss == false then
-                auraTarget = nil
-            end
+            auraTarget = nil
         end
 
     end
