@@ -836,79 +836,13 @@ local function dragNPCToPlayer(npcRoot)
 end
 
 -- ─────────────────────────────────────────────────
---  Get all BaseParts that belong to enemy humanoids
---  AND are within distance + visible in the viewport
---  (matches the logic from your provided snippet)
+--  Press E key (executor keypress/keyrelease)
 -- ─────────────────────────────────────────────────
-local function getEnemyPartsInViewport(range)
-    local result = {}
-    for _, part in ipairs(workspace:GetDescendants()) do
-        if part:IsA("BasePart") and part.Parent ~= char then
-            local dist = player:DistanceFromCharacter(part.Position)
-            if dist <= range then
-                local _, isVisible = Camera:WorldToViewportPoint(part.Position)
-                if isVisible then
-                    local hum = part.Parent:FindFirstChildWhichIsA("Humanoid")
-                    if hum and hum.Health > 0 and not isShopNPC(part.Parent) then
-                        table.insert(result, part)
-                    end
-                end
-            end
-        end
-    end
-    return result
-end
-
--- ─────────────────────────────────────────────────
---  Attack function — 3-layer approach, zero input
--- ─────────────────────────────────────────────────
-local FARM_RANGE = 20
-
-local function doAttack(targetRoot, range)
-    local tool = char:FindFirstChildOfClass("Tool")
-    local handle = tool and tool:FindFirstChild("Handle")
-
-    -- ── Layer 1: tool:Activate() ──────────────────
-    -- NOT a mouse click. This is a direct Lua API call
-    -- that fires the tool's Activated event — exactly
-    -- what the game's combat system listens to.
-    -- The server receives it as a legitimate tool activation.
+local function pressE()
     pcall(function()
-        if tool then tool:Activate() end
-    end)
-
-    -- ── Layer 2: firetouchinterest ────────────────
-    -- Fires physical touch events between tool and
-    -- NPC parts. Works for games using Touched events.
-    if handle then
-        local parts = getEnemyPartsInViewport(range or FARM_RANGE)
-        for _, part in ipairs(parts) do
-            pcall(function()
-                firetouchinterest(handle, part, 0)
-                firetouchinterest(handle, part, 1)
-            end)
-        end
-    end
-
-    -- ── Layer 3: fire combat RemoteEvents directly ─
-    -- Scans ReplicatedStorage for the game's own attack
-    -- remotes and fires them with the target's info.
-    -- No input involved — pure server communication.
-    pcall(function()
-        for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-            if v:IsA("RemoteEvent") then
-                local n = v.Name:lower()
-                if n:find("attack") or n:find("m1") or n:find("punch")
-                or n:find("hit")    or n:find("damage") or n:find("combat")
-                or n:find("swing")  or n:find("ability") or n:find("skill") then
-                    if targetRoot then
-                        v:FireServer(targetRoot.Parent, targetRoot.CFrame.Position)
-                    else
-                        v:FireServer()
-                    end
-                end
-            end
-        end
+        keypress(0x45)   -- 0x45 = virtual key code for E
+        task.wait(0.1)
+        keyrelease(0x45)
     end)
 end
 
@@ -992,34 +926,30 @@ end)
 
 -- ─────────────────────────────────────────────────
 --  ══ Combat loop ══
---  3-layer attack: tool:Activate() + firetouchinterest
---  + RemoteEvent scan. Zero input simulation.
+--  Drags nearest enemy NPC to player, faces it,
+--  then presses E every 1 second to attack.
 -- ─────────────────────────────────────────────────
 task.spawn(function()
-    while task.wait() do   -- task.wait() = ~1/30s, fast but not spammy
+    while task.wait(1) do
 
         -- ── AUTO FARM ──────────────────────────────
         if State.autoFarm then
             pcall(function()
-                -- Refresh target when dead or gone
                 if not farmTarget or not farmTarget.Parent
                 or not farmTarget.Parent:FindFirstChildOfClass("Humanoid")
                 or farmTarget.Parent:FindFirstChildOfClass("Humanoid").Health <= 0 then
                     farmTarget = getNearestNPC(false)
                 end
-
                 if farmTarget then
                     dragNPCToPlayer(farmTarget)
-                    doAttack(farmTarget, FARM_RANGE)
+                    pressE()
                 end
             end)
-
         else
             farmTarget = nil
         end
 
         -- ── KILL AURA ──────────────────────────────
-        -- Drag nearest in-range enemy to player and attack
         if State.killAura then
             pcall(function()
                 local best, bestDist = nil, math.huge
@@ -1040,7 +970,7 @@ task.spawn(function()
                     pcall(function()
                         rootPart.CFrame = CFrame.lookAt(rootPart.Position, best.Position)
                     end)
-                    doAttack(best, State.killAuraRange)
+                    pressE()
                 end
             end)
         end
@@ -1051,11 +981,11 @@ task.spawn(function()
                 if not auraTarget or not auraTarget.Parent
                 or not auraTarget.Parent:FindFirstChildOfClass("Humanoid")
                 or auraTarget.Parent:FindFirstChildOfClass("Humanoid").Health <= 0 then
-                    auraTarget = getNearestNPC(true)   -- bossOnly = true
+                    auraTarget = getNearestNPC(true)
                 end
                 if auraTarget then
                     dragNPCToPlayer(auraTarget)
-                    doAttack(auraTarget, FARM_RANGE)
+                    pressE()
                 end
             end)
         else
