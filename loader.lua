@@ -92,29 +92,28 @@ local function getKeyName(kc)
 end
 
 -- ──────────────────────────────────────────────
--- Embedded Scripts  (20 unique, no duplicates)
+-- Embedded Scripts  (19 unique, no duplicates, 18+ content removed)
 -- ──────────────────────────────────────────────
 local SCRIPTS = {
     [1]  = { display = "(Blox Fruits - Gravity Hub) VapeVoidware Loader",            code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/VapeVoidware/VW-Add/main/loader.lua\", true))()" },
     [2]  = { display = "(Blox Fruits - Auto Farm + Raid) Blue X Hub",                code = "_G.AutoTranslate=true\n_G.SaveConfig=true\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/Main.lua\"))()" },
     [3]  = { display = "(Blox Fruits - Auto V4 + Level + Raid) Xeno Gravity Hub",   code = "loadstring(game:HttpGet(\"https://rawscripts.net/raw/GRAVITY-Blox-Fruits-BEST-SCRIPT-SOLARA-AND-XENO-AUTO-V4-AUTO-LEVEL-AUTO-RAID-37566\"))()" },
-    [4]  = { display = "(Universal - Admin Panel) Admin Panel Keyless",              code = "loadstring(game:HttpGet(\"https://rawscripts.net/raw/Universal-Script-Admin-Panel-Universal-KEYLESS-171955\"))()" },
-    [5]  = { display = "(Bite By Night - Auto Win + Farm + Aimbot) Bite By Night Hub", code = "loadstring(game:HttpGet(\"https://rawscripts.net/raw/Bite-By-Night-Auto-win-Money-Farm-Kill-All-Aimbot-and-70-features-202018\"))()" },
-    [6]  = { display = "(Universal - Multi Hub) Molyn Hub Keyless",                  code = "loadstring(game:HttpGet(\"https://rawscripts.net/raw/Universal-Script-MOLYN-DEVELOPMENT-201480\"))()" },
-    [7]  = { display = "(Universal - Multi Hub) Real Cryptic Free",                  code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/OnlyCryptic/Cryptic/hm/main.lua\"))()" },
-    [8]  = { display = "(DOORS - Godmode + Speed Bypass) ZeScript",                 code = "loadstring(game:HttpGet(\"https://rawscripts.net/raw/DOORS-ZeScript-67246\"))()" },
-    [9]  = { display = "(Blox Fruits - Gravity Hub V2) Gravity Hub",                code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/Dev-GravityHub/BloxFruit/refs/heads/main/Main.lua\"))()" },
-    [10] = { display = "(Blox Fruits - Server Hop) Master Hop",                     code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/WhiteX1208/Scripts/refs/heads/main/HopScript.luau\"))()" },
-    [11] = { display = "(Break In 2 - Hub Script) Break In 2 Hub",                  code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/RScriptz/RobloxScripts/main/BreakIn2.lua\"))()" },
-    [12] = { display = "(Forsaken - Hub Script) Forsaken Hub",                      code = "loadstring(game:HttpGet(\"https://pastebin.com/raw/zH9Extzk\"))()" },
-    [13] = { display = "(Blox Fruits - Fruit Finder) Fruit Find",                   code = "getgenv().Team=\"Marines\"\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/Dev-GravityHub/BloxFruit/refs/heads/main/FindFruit.lua\"))()" },
-    [14] = { display = "(Blox Fruits - Bounty Hunt + Auto Hop) Bounty Hunt Hop",    code = "getgenv().Config={Team=\"Pirates\",HideUI=true,HuntConfig={[\"Earned Notification Enabled\"]=false,[\"Reset Farm (New)\"]=true,[\"Chat\"]=false,[\"Farm Delay\"]=0.22,[\"Webhook\"]={Enabled=false,Url=\"\"}}}\nloadstring(game:HttpGet(\"https://api.luarmor.net/files/v4/loaders/2ffcdb62773f587bfb9eb0d52bb35b0c.lua\"))()" },
-    [15] = { display = "(Ink - Needs Key) AX Scripts Ink",                          code = "script_key=\"KEY_HERE\";\nloadstring(game:HttpGet(\"https://officialaxscripts.vercel.app/scripts/AX-Loader.lua\"))()" },
-    [16] = { display = "(Ink - Bypass) Ink Game Bypass",                            code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/eikikrkr-ux/bypasok/refs/heads/main/ok\"))()" },
-    [17] = { display = "(DOORS - NullFire Hub) NullFire Doors",                     code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/TeamNullFire/NullFire/main/loader.lua\"))()" },
-    [18] = { display = "(Universal - Multi Hub) Orange Hub",                         code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/HieuDepTrai-Z/Dev_Orange/refs/heads/main/OrangeHub.lua\"))()" },
-    [19] = { display = "(Blox Fruits - WhiteX Beta) WhiteX BF-Beta",               code = "script_key=\"false\"\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/WhiteX1208/Scripts/refs/heads/main/BF-Beta.lua\"))()" },
-    [20] = { display = "(Blox Fruits - Auto Bounty) SeraHub AutoBounty",            code = "getgenv().config={[\"Team\"]=\"Pirates\",[\"Use Race\"]={[\"V3\"]=true,[\"V4\"]=true},[\"Info Screen\"]=true,[\"White Screen\"]=false,[\"BypassTp\"]=true,[\"SkipFruit\"]={\"Portal-Portal\"},[\"Skip Race V4 User\"]=true,[\"MinBountyHunt\"]=0,[\"MaxBountyHunt\"]=30000000,[\"SafeHealth\"]=4000}\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/LumosSera/SeraHub/main/AutoBounty.lua\"))()" },
+    [4]  = { display = "(Bite By Night - Auto Win + Farm + Aimbot) Bite By Night Hub", code = "loadstring(game:HttpGet(\"https://rawscripts.net/raw/Bite-By-Night-Auto-win-Money-Farm-Kill-All-Aimbot-and-70-features-202018\"))()" },
+    [5]  = { display = "(Universal - Multi Hub) Molyn Hub Keyless",                  code = "loadstring(game:HttpGet(\"https://rawscripts.net/raw/Universal-Script-MOLYN-DEVELOPMENT-201480\"))()" },
+    [6]  = { display = "(Universal - Multi Hub) Real Cryptic Free",                  code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/OnlyCryptic/Cryptic/hm/main.lua\"))()" },
+    [7]  = { display = "(DOORS - Godmode + Speed Bypass) ZeScript",                 code = "loadstring(game:HttpGet(\"https://rawscripts.net/raw/DOORS-ZeScript-67246\"))()" },
+    [8]  = { display = "(Blox Fruits - Gravity Hub V2) Gravity Hub",                code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/Dev-GravityHub/BloxFruit/refs/heads/main/Main.lua\"))()" },
+    [9]  = { display = "(Blox Fruits - Server Hop) Master Hop",                     code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/WhiteX1208/Scripts/refs/heads/main/HopScript.luau\"))()" },
+    [10] = { display = "(Break In 2 - Hub Script) Break In 2 Hub",                  code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/RScriptz/RobloxScripts/main/BreakIn2.lua\"))()" },
+    [11] = { display = "(Forsaken - Hub Script) Forsaken Hub",                      code = "loadstring(game:HttpGet(\"https://pastebin.com/raw/zH9Extzk\"))()" },
+    [12] = { display = "(Blox Fruits - Fruit Finder) Fruit Find",                   code = "getgenv().Team=\"Marines\"\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/Dev-GravityHub/BloxFruit/refs/heads/main/FindFruit.lua\"))()" },
+    [13] = { display = "(Blox Fruits - Bounty Hunt + Auto Hop) Bounty Hunt Hop",    code = "getgenv().Config={Team=\"Pirates\",HideUI=true,HuntConfig={[\"Earned Notification Enabled\"]=false,[\"Reset Farm (New)\"]=true,[\"Chat\"]=false,[\"Farm Delay\"]=0.22,[\"Webhook\"]={Enabled=false,Url=\"\"}}}\nloadstring(game:HttpGet(\"https://api.luarmor.net/files/v4/loaders/2ffcdb62773f587bfb9eb0d52bb35b0c.lua\"))()" },
+    [14] = { display = "(Ink - Needs Key) AX Scripts Ink",                          code = "script_key=\"KEY_HERE\";\nloadstring(game:HttpGet(\"https://officialaxscripts.vercel.app/scripts/AX-Loader.lua\"))()" },
+    [15] = { display = "(Ink - Bypass) Ink Game Bypass",                            code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/eikikrkr-ux/bypasok/refs/heads/main/ok\"))()" },
+    [16] = { display = "(DOORS - NullFire Hub) NullFire Doors",                     code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/TeamNullFire/NullFire/main/loader.lua\"))()" },
+    [17] = { display = "(Universal - Multi Hub) Orange Hub",                         code = "loadstring(game:HttpGet(\"https://raw.githubusercontent.com/HieuDepTrai-Z/Dev_Orange/refs/heads/main/OrangeHub.lua\"))()" },
+    [18] = { display = "(Blox Fruits - WhiteX Beta) WhiteX BF-Beta",               code = "script_key=\"false\"\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/WhiteX1208/Scripts/refs/heads/main/BF-Beta.lua\"))()" },
+    [19] = { display = "(Blox Fruits - Auto Bounty) SeraHub AutoBounty",            code = "getgenv().config={[\"Team\"]=\"Pirates\",[\"Use Race\"]={[\"V3\"]=true,[\"V4\"]=true},[\"Info Screen\"]=true,[\"White Screen\"]=false,[\"BypassTp\"]=true,[\"SkipFruit\"]={\"Portal-Portal\"},[\"Skip Race V4 User\"]=true,[\"MinBountyHunt\"]=0,[\"MaxBountyHunt\"]=30000000,[\"SafeHealth\"]=4000}\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/LumosSera/SeraHub/main/AutoBounty.lua\"))()" },
 }
 
 -- ──────────────────────────────────────────────
