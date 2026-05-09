@@ -30,6 +30,9 @@ local settings = {
     aimbotEnabled      = false,
     aimbotMode         = "Nearest",
     aimbotTarget       = "",
+    flingAllMode       = "TP",
+    tweenTPTarget      = "",
+    tweenTPSpeed       = 50,
 }
 
 -- safeStr: Rayfield dropdowns sometimes pass a table {value}; this unwraps it safely
@@ -57,6 +60,9 @@ local function saveSettings()
         "aimbotEnabled="      .. tostring(settings.aimbotEnabled),
         "aimbotMode="         .. safeStr(settings.aimbotMode),
         "aimbotTarget="       .. safeStr(settings.aimbotTarget),
+        "flingAllMode="       .. safeStr(settings.flingAllMode),
+        "tweenTPTarget="      .. safeStr(settings.tweenTPTarget),
+        "tweenTPSpeed="       .. tostring(settings.tweenTPSpeed),
     }
     pcall(function() writefile(SETTINGS_FILE, table.concat(lines, "\n")) end)
 end
@@ -81,6 +87,9 @@ pcall(function()
             elseif key == "aimbotEnabled"     then settings.aimbotEnabled     = (val == "true")
             elseif key == "aimbotMode"        then settings.aimbotMode        = val
             elseif key == "aimbotTarget"      then settings.aimbotTarget      = val
+            elseif key == "flingAllMode"      then settings.flingAllMode      = val
+            elseif key == "tweenTPTarget"     then settings.tweenTPTarget     = val
+            elseif key == "tweenTPSpeed"      then settings.tweenTPSpeed      = tonumber(val) or 50
             end
         end
     end
@@ -774,30 +783,113 @@ Players.LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ── Fling All ─────────────────────────────────
+-- TP mode:    instantly teleport to each player then fling them
+-- Tween mode: smoothly fly to each player then fling them
 local flingAllEnabled = false
+local flingAllMode    = settings.flingAllMode or "TP"
 
 local function setFlingAllToggle(state)
     flingAllEnabled = state
     if state then
         task.spawn(function()
             while flingAllEnabled do
-                for _, plr in pairs(Players:GetPlayers()) do
-                    if plr ~= Players.LocalPlayer and plr.Character then
-                        local root = plr.Character:FindFirstChild("HumanoidRootPart")
-                        if root then
-                            pcall(function()
-                                root.Velocity = Vector3.new(
-                                    math.random(-300, 300), 800, math.random(-300, 300)
-                                )
-                            end)
+                local myChar = Players.LocalPlayer.Character
+                local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                if myRoot then
+                    for _, plr in pairs(Players:GetPlayers()) do
+                        if not flingAllEnabled then break end
+                        if plr ~= Players.LocalPlayer and plr.Character then
+                            local tgtRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+                            if tgtRoot then
+                                pcall(function()
+                                    if flingAllMode == "TP" then
+                                        myRoot.CFrame = tgtRoot.CFrame + Vector3.new(2, 0, 0)
+                                        task.wait(0.05)
+                                        tgtRoot.Velocity = Vector3.new(
+                                            math.random(-300, 300), 950, math.random(-300, 300)
+                                        )
+                                        task.wait(0.15)
+                                    elseif flingAllMode == "Tween" then
+                                        local startCF = myRoot.CFrame
+                                        local endCF   = tgtRoot.CFrame + Vector3.new(2, 0, 0)
+                                        for i = 1, 12 do
+                                            if not flingAllEnabled then break end
+                                            myRoot.CFrame = startCF:Lerp(endCF, i / 12)
+                                            task.wait(0.03)
+                                        end
+                                        tgtRoot.Velocity = Vector3.new(
+                                            math.random(-300, 300), 950, math.random(-300, 300)
+                                        )
+                                        task.wait(0.15)
+                                    end
+                                end)
+                            end
                         end
                     end
                 end
-                task.wait(0.1)
+                task.wait(0.5)
             end
         end)
     end
 end
+
+-- ── Tween TP ──────────────────────────────────
+-- Smoothly flies the local player toward a chosen target using noclip.
+-- Noclip turns on when started, off when arrived or cancelled.
+local tweenTPEnabled = false
+local tweenTPTarget  = settings.tweenTPTarget or ""
+local tweenTPSpeed   = settings.tweenTPSpeed  or 50
+local tweenTPConn    = nil
+
+local function stopTweenTP(notify)
+    tweenTPEnabled = false
+    if tweenTPConn then tweenTPConn:Disconnect() tweenTPConn = nil end
+    local char = Players.LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.PlatformStand = false end
+    end
+    if noclipEnabled then setNoclipToggle(false) end
+    if notify then
+        pcall(function()
+            Rayfield:Notify({ Title = "Tween TP", Content = "Stopped.", Duration = 2 })
+        end)
+    end
+end
+
+local function setTweenTPToggle(state)
+    if not state then stopTweenTP(true) return end
+    local targetPlr = Players:FindFirstChild(tweenTPTarget)
+    if not targetPlr or not targetPlr.Character then
+        Rayfield:Notify({ Title = "Tween TP", Content = "Select a valid target player first.", Duration = 3 })
+        return
+    end
+    tweenTPEnabled = true
+    setNoclipToggle(true)
+    local char = Players.LocalPlayer.Character
+    local hum  = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.PlatformStand = true end
+    tweenTPConn = RunService.Heartbeat:Connect(function(dt)
+        if not tweenTPEnabled then return end
+        local myChar  = Players.LocalPlayer.Character
+        local myRoot  = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        local tgtChar = targetPlr.Character
+        local tgtRoot = tgtChar and tgtChar:FindFirstChild("HumanoidRootPart")
+        if not myRoot or not tgtRoot then stopTweenTP(false) return end
+        local dist = (myRoot.Position - tgtRoot.Position).Magnitude
+        if dist < 4 then
+            stopTweenTP(false)
+            Rayfield:Notify({ Title = "Tween TP", Content = "Arrived at " .. targetPlr.Name, Duration = 2 })
+            return
+        end
+        local dir = (tgtRoot.Position - myRoot.Position).Unit
+        myRoot.CFrame = myRoot.CFrame + dir * tweenTPSpeed * dt
+    end)
+end
+
+Players.LocalPlayer.CharacterAdded:Connect(function()
+    if tweenTPEnabled then stopTweenTP(false) end
+end)
 
 -- ── NEW_AntiFling ─────────────────────────────
 -- Makes other players' parts non-colliding with you (you phase through them)
@@ -1077,6 +1169,52 @@ HomeTab:CreateToggle({
     Callback     = function(Value) setZeroGravToggle(Value) end,
 })
 
+HomeTab:CreateDropdown({
+    Name            = "✈  Tween TP — Select Target",
+    Options         = (function()
+        local names = {}
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= Players.LocalPlayer then
+                table.insert(names, plr.Name)
+            end
+        end
+        if #names == 0 then names = { "No players" } end
+        return names
+    end)(),
+    CurrentOption   = { tweenTPTarget ~= "" and tweenTPTarget or "No players" },
+    MultipleOptions = false,
+    Flag            = "TweenTPTarget",
+    Callback        = function(Option)
+        local val = type(Option) == "table" and safeStr(Option) or tostring(Option)
+        if val == "No players" then return end
+        tweenTPTarget          = val
+        settings.tweenTPTarget = val
+        saveSettings()
+        Rayfield:Notify({ Title = "Tween TP", Content = "Target: " .. val, Duration = 2 })
+    end,
+})
+
+HomeTab:CreateSlider({
+    Name         = "✈  Tween TP Speed",
+    Range        = { 5, 300 },
+    Increment    = 5,
+    Suffix       = " spd",
+    CurrentValue = settings.tweenTPSpeed,
+    Flag         = "TweenTPSpeed",
+    Callback     = function(Value)
+        tweenTPSpeed          = Value
+        settings.tweenTPSpeed = Value
+        saveSettings()
+    end,
+})
+
+HomeTab:CreateToggle({
+    Name         = "✈  Tween TP  (fly to target · noclip auto on/off)",
+    CurrentValue = false,
+    Flag         = "TweenTP",
+    Callback     = function(Value) setTweenTPToggle(Value) end,
+})
+
 -- ─── Visual ────────────────────────────────────────────────────────────────
 HomeTab:CreateSection("Visual")
 
@@ -1195,8 +1333,23 @@ HomeTab:CreateToggle({
     Callback     = function(Value) setFlingToggle(Value) end,
 })
 
+HomeTab:CreateDropdown({
+    Name            = "💥  Fling All — Mode",
+    Options         = { "TP", "Tween" },
+    CurrentOption   = { settings.flingAllMode },
+    MultipleOptions = false,
+    Flag            = "FlingAllMode",
+    Callback        = function(Option)
+        local val = type(Option) == "table" and safeStr(Option) or tostring(Option)
+        flingAllMode          = val
+        settings.flingAllMode = val
+        saveSettings()
+        Rayfield:Notify({ Title = "Fling All Mode", Content = "Mode: " .. val, Duration = 2 })
+    end,
+})
+
 HomeTab:CreateToggle({
-    Name         = "💥  Fling All  (fling every player)",
+    Name         = "💥  Fling All  (tp/tween to each player + fling)",
     CurrentValue = false,
     Flag         = "FlingAll",
     Callback     = function(Value) setFlingAllToggle(Value) end,
@@ -1261,6 +1414,9 @@ HomeTab:CreateButton({
         settings.aimbotEnabled = false
         settings.aimbotMode    = "Nearest"
         settings.aimbotTarget  = ""
+        settings.flingAllMode  = "TP"
+        settings.tweenTPTarget = ""
+        settings.tweenTPSpeed  = 50
         saveSettings()
         setIJToggle(false) setSpeedToggle(false) setSpinToggle(false)
         setNoclipToggle(false) setFlyToggle(false) setESPToggle(false)
@@ -1268,7 +1424,9 @@ HomeTab:CreateButton({
         setFullBrightToggle(false) setAimbotToggle(false)
         setNoFallToggle(false) setWallWalkToggle(false)
         setZeroGravToggle(false) setNewAntiFlingToggle(false)
+        stopTweenTP(false)
         aimbotMode = "Nearest" aimbotTarget = "" currentWalkSpeed = 16
+        flingAllMode = "TP" tweenTPTarget = "" tweenTPSpeed = 50
         Rayfield:Notify({ Title = "Reset", Content = "All settings reset to defaults.", Duration = 3 })
     end,
 })
@@ -1370,6 +1528,7 @@ killScript = function()
     pcall(function() setZeroGravToggle(false) end)
     pcall(function() setNewAntiFlingToggle(false) end)
     pcall(function() setFlingAllToggle(false) end)
+    pcall(function() stopTweenTP(false) end)
 
     -- 2. Hard-restore the local character to a clean state
     pcall(function()
