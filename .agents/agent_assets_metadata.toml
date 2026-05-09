@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "zxYS5SoX_XjEaUb4bg9zk"
+uri = "file://CODE_MAP.txt"
+type = "text"
+title = "Universal Sun Hub — Code Map"

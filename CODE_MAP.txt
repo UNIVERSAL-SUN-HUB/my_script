@@ -1,0 +1,404 @@
+================================================================================
+  UNIVERSAL SUN HUB  —  CODE MAP / FUNCTION CHART
+  Last updated: May 2026
+================================================================================
+
+FILES IN THIS PROJECT
+──────────────────────────────────────────────────────────────────────────────
+  loader_to_run_main.lua   Paste into executor. Shows a styled confirm
+                           dialog + animated progress bar, then fetches
+                           loader.lua from GitHub and runs it.
+                           (self-contained boot screen — 343 lines)
+
+  loader.lua               The full hub. Loaded by loader_to_run_main.lua.
+                           Contains all game logic, settings, and Rayfield UI.
+                           (1 774 lines as of last edit)
+
+  CODE_MAP.txt             This file.
+
+================================================================================
+  loader_to_run_main.lua  —  LINE MAP
+================================================================================
+
+  Line   1        File header / comment
+  Line   4-8      Service + player references
+  Line  10-15     BootGui ScreenGui creation
+  Line  17-24     Backdrop (full-screen dim frame)
+  Line  26-55     Confirm Dialog frame + accent bar + UIStroke
+  Line  57-92     Icon, Title, Subtitle labels inside dialog
+  Line  94-121    Execute button (▶ Execute) + hover tween wiring
+  Line 123-153    Dismiss / Close button + hover tween + click → destroy
+  Line 155-257    Progress Panel (ProgressBox, BarTrack, BarFill,
+                  PercentLabel, LogLabel, StageLabel)
+  Line 259-267    setProgress()  helper — animates bar + updates labels
+  Line 269-334    runLoadSequence()  — the full load pipeline:
+                    L 274  stage 1: Connecting to GitHub
+                    L 277  stage 2: Fetching loader.lua via HttpGet
+                    L 280  pcall fetch from raw.githubusercontent.com
+                    L 285  error handling if fetch fails
+                    L 294  stage 3: Compiling via loadstring()
+                    L 307  stage 4: Executing (pcall fn)
+                    L 320  stage 5: Loading Rayfield UI label
+                    L 323  stage 6: Registering scripts & features label
+                    L 326  stage 7: Done — fade out and destroy BootGui
+  Line 336-342    ExecBtn click wiring → calls runLoadSequence()
+
+  GitHub URL loaded:
+    https://raw.githubusercontent.com/naitikthakur8273-alt/my_script/
+    refs/heads/main/loader.lua
+
+================================================================================
+  loader.lua  —  LINE MAP
+================================================================================
+
+──────────────────────────────────────────────────────────────────────────────
+  BLOCK 1 · Services & Settings                            Lines 1–107
+──────────────────────────────────────────────────────────────────────────────
+
+  Line   1-3      File header comment
+  Line   4-6      Service locals (Players, UserInputService, RunService)
+  Line   8        local player = Players.LocalPlayer
+  Line  10-12     SETTINGS_FILE constant ("universal_sun_hub_settings.txt")
+  Line  15-39     settings{}  table — all persisted defaults:
+                    menuKey, ijEnabled, speedEnabled, speedVal,
+                    spinEnabled, spinSpeedVal, noclipEnabled,
+                    flyEnabled, flySpeedVal, espEnabled,
+                    hitboxEnabled, hitboxSizeVal, flingEnabled,
+                    fullBrightEnabled, aimbotEnabled, aimbotMode,
+                    aimbotTarget, flingAllMode, tweenTPTarget, tweenTPSpeed
+  Line  41-43     safeStr(v)  — unwraps Rayfield dropdown table values
+  Line  44-71     saveSettings()  — serialises settings{} to file
+  Line  73-99     pcall load block — reads file, parses key=val lines
+  Line  98        menuKey  Enum.KeyCode resolved from settings.menuKey
+  Line 100-98     getKeyName(kc)  — pretty-prints keycode names
+
+──────────────────────────────────────────────────────────────────────────────
+  BLOCK 2 · Script List (SCRIPTS table)                    Lines 109–132
+──────────────────────────────────────────────────────────────────────────────
+
+  Line 109-132    SCRIPTS{}  table — 19 entries, each has:
+                    .display  (button label shown in Scripts tab)
+                    .code     (Lua string passed to loadstring())
+
+──────────────────────────────────────────────────────────────────────────────
+  BLOCK 3 · Feature Logic (pure Lua, no UI)                Lines 134–1027
+──────────────────────────────────────────────────────────────────────────────
+
+  ── Infinite Jump ─────────────────────────────────────── Lines 138–157
+    Line 139      local ijEnabled, ijConnection
+    Line 142      setIJToggle(state)
+                    ON  → connects UserInputService.JumpRequest
+                    OFF → disconnects ijConnection
+
+  ── Walk Speed ────────────────────────────────────────── Lines 159–181
+    Line 161      local speedEnabled, currentWalkSpeed
+    Line 163      applyWalkSpeed()  — sets Humanoid.WalkSpeed
+    Line 170      setSpeedToggle(state)
+
+  ── Spin ──────────────────────────────────────────────── Lines 183–214
+    Line 184      local spinEnabled, spinSpeed
+    Line 187      applySpin()  — creates/destroys BodyAngularVelocity "USHSpin"
+    Line 204      setSpinToggle(state)
+
+  ── Noclip ────────────────────────────────────────────── Lines 216–249
+    Line 217      local noclipEnabled, noclipConn, noclipClip
+    Line 221      startNoclip()  — RunService.Stepped loop, sets CanCollide=false
+    Line 235      stopNoclip()   — disconnects, sets noclipClip=true
+    Line 240      setNoclipToggle(state)
+
+  ── Fly ───────────────────────────────────────────────── Lines 251–349
+    Line 258      local flyEnabled, FLY_CONTROL, FLY_SPEED, flySpeed
+    Line 245-262  InputBegan/Ended wiring for WASD + Q/E keys
+    Line 279      startFly()  — creates BodyGyro + BodyVelocity,
+                               task.spawn loop until FLYING=false
+    Line 323      stopFly()   — sets FLYING=false
+    Line 327      setFlyToggle(state)
+
+  ── ESP ───────────────────────────────────────────────── Lines 352–411
+    Line 353      local espEnabled, espObjects{}
+    Line 356      createESP(plr)  — Highlight + BillboardGui name tag
+    Line 390      enableESP()  — calls createESP for all players
+    Line 394      disableESP()  — destroys all espObjects
+    Line 403      setESPToggle(state)
+
+  ── Hitbox Expander ───────────────────────────────────── Lines 414–469
+    Line 415      local hitboxEnabled, hitboxSize
+    Line 418      applyHitbox(plr)  — resizes HumanoidRootPart
+    Line 430      resetHitbox(plr)  — restores original size
+    Line 442      applyAllHitboxes() / resetAllHitboxes()
+    Line 450      setHitboxToggle(state)
+
+  ── WalkFling ─────────────────────────────────────────── Lines 471–533
+    Line 473      local walkflinging, flingDiedConn
+    Line 475      getFlingRoot()
+    Line 480      startWalkFling()  — Heartbeat loop, multiplies velocity
+    Line 518      stopWalkFling()
+    Line 523      setFlingToggle(state)
+
+  ── Full Bright ───────────────────────────────────────── Lines 536–596
+    Line 537      local fullBrightEnabled, origLighting{}
+    Line 550      setFullBrightToggle(state)
+                    ON  → max brightness, disables fog/blur/bloom
+                    OFF → restores origLighting values
+
+  ── cam_aimbot ────────────────────────────────────────── Lines 598–650
+    Line 599      local aimbotEnabled, aimbotMode, aimbotTarget, aimbotConn
+    Line 604      getAimbotPlayer()  — Nearest or named Target
+    Line 630      startAimbot()  — RenderStepped, locks cam.CFrame to head
+    Line 642      stopAimbot()
+    Line 646      setAimbotToggle(state)
+
+  ── NoFall ────────────────────────────────────────────── Lines 653–679
+    Line 654      local noFallEnabled, noFallConn
+    Line 657      setNoFallToggle(state)
+                    ON  → Heartbeat clamps Y velocity to -40
+
+  ── Wall Walk ─────────────────────────────────────────── Lines 682–720
+    Line 683      local wallWalkEnabled, wallWalkConn
+    Line 686      setWallWalkToggle(state)
+                    ON  → RenderStepped raycast forward; if wall hit,
+                          boosts Y velocity and forces Climbing state
+
+  ── Zero Gravity ──────────────────────────────────────── Lines 723–786
+    Line 724      local zeroGravEnabled, zeroGravConn, zeroGravForce, zeroGravAttach
+    Line 730      setZeroGravToggle(state)
+                    ON  → VectorForce cancels gravity; RenderStepped
+                          steers with cam direction, caps at ZG_MAX_SPEED
+                    OFF → destroys force/attach, restores PlatformStand
+
+  ── Fling All ─────────────────────────────────────────── Lines 788–837
+    Line 788      local flingAllEnabled, flingAllMode ("TP" or "Tween")
+    Line 794      setFlingAllToggle(state)
+                    Loops all players every 0.5s:
+                    TP mode    → instantly CFrame to player, apply Velocity 950Y
+                    Tween mode → Lerp to player over 12 steps × 0.03s, then fling
+
+  ── Tween TP ──────────────────────────────────────────── Lines 839–893
+    Line 839      local tweenTPEnabled, tweenTPTarget, tweenTPSpeed, tweenTPConn
+    Line 847      stopTweenTP(notify)
+                    Disconnects Heartbeat conn, restores PlatformStand,
+                    calls setNoclipToggle(false)
+    Line 860      setTweenTPToggle(state)
+                    ON  → enables noclip, PlatformStand=true,
+                          Heartbeat loop moves HRP toward target by
+                          speed * dt per frame; stops at dist < 4 studs
+                    OFF → calls stopTweenTP()
+    Line 891      CharacterAdded hook → stops if respawn during flight
+
+  ── NEW_AntiFling ─────────────────────────────────────── Lines 894–916
+    Line 896      local newAntiFlingEnabled, newAntiFlingConn
+    Line 899      setNewAntiFlingToggle(state)
+                    ON  → Stepped loop, sets all other players'
+                          BasePart.CanCollide = false
+
+  ── Target TP ─────────────────────────────────────────── Lines 918–933
+    Line 919      doTargetTP()  — teleports local HRP to aimbotTarget + offset
+
+  ── Target Fling ──────────────────────────────────────── Lines 935–948
+    Line 936      doTargetFling()  — random velocity fling on aimbotTarget HRP
+
+  ── Rejoin ────────────────────────────────────────────── Lines 950–957
+    Line 951      doRejoin()  — TeleportService:TeleportToPlaceInstance (same server)
+
+  ── Server Hop ────────────────────────────────────────── Lines 959–998
+    Line 960      doServerHop()  — HttpGet Roblox API, picks random server,
+                                   TeleportToPlaceInstance
+
+──────────────────────────────────────────────────────────────────────────────
+  BLOCK 4 · Hub State & Toggle Helpers                     Lines 1000–1040
+──────────────────────────────────────────────────────────────────────────────
+
+  Line 1000       local killScript (forward declaration)
+  Line 1003       local hubVisible, hubKilled, _floatGui
+  Line 1010       findRayfieldGui()  — searches PlayerGui then CoreGui
+  Line 1020       toggleRayfieldUI()  — flips hubVisible + rg.Enabled
+
+──────────────────────────────────────────────────────────────────────────────
+  BLOCK 5 · Rayfield UI Load + Main Window                 Lines 1029–1065
+──────────────────────────────────────────────────────────────────────────────
+
+  Line 1032       local Rayfield = loadstring(HttpGet "sirius.menu/rayfield")()
+  Line 1034-1040  UserInputService.InputBegan → menuKey → toggleRayfieldUI()
+  Line 1045       Rayfield:CreateWindow()  → local Window
+
+──────────────────────────────────────────────────────────────────────────────
+  BLOCK 6 · Home Tab UI                                    Lines 1057–1440
+──────────────────────────────────────────────────────────────────────────────
+
+  Line 1060       local HomeTab = Window:CreateTab("Home")
+  Line 1062       Section: Welcome  (paragraph)
+
+  Line 1069       Section: Movement
+    Line 1078       Toggle — Infinite Jump      → setIJToggle
+    Line 1085       Toggle — Speed Boost        → setSpeedToggle
+    Line 1093       Slider — Walk Speed         → currentWalkSpeed
+    Line 1106       Toggle — Noclip             → setNoclipToggle
+    Line 1112       Toggle — Fly                → setFlyToggle
+    Line 1119       Slider — Fly Speed          → flySpeed
+    Line 1132       Toggle — Spin               → setSpinToggle
+    Line 1141       Slider — Spin Speed         → spinSpeed
+    Line 1153       Toggle — NoFall             → setNoFallToggle
+    Line 1160       Toggle — Wall Walk          → setWallWalkToggle
+    Line 1168       Toggle — Zero Gravity       → setZeroGravToggle
+    Line 1175       Dropdown — Tween TP Target  → tweenTPTarget
+    Line 1200       Slider  — Tween TP Speed    → tweenTPSpeed
+    Line 1214       Toggle  — Tween TP          → setTweenTPToggle
+
+  Line 1218       Section: Visual
+    Line 1224       Toggle — Full Bright        → setFullBrightToggle
+    Line 1231       Toggle — ESP                → setESPToggle
+    Line 1238       Toggle — Hitbox Expander    → setHitboxToggle
+    Line 1245       Slider — Hitbox Size        → hitboxSize
+
+  Line 1257       Section: Combat
+    Line 1265       Toggle   — cam_aimbot       → setAimbotToggle
+    Line 1272       Dropdown — cam_aimbot Mode  → aimbotMode ("Nearest"/"Target")
+    Line 1289       Dropdown — Target Player    → aimbotTarget
+    Line 1307       Button   — Refresh Player List
+    Line 1323       Button   — Target TP        → doTargetTP
+    Line 1329       Button   — Target Fling     → doTargetFling
+    Line 1335       Toggle   — WalkFling        → setFlingToggle
+    Line 1339       Dropdown — Fling All Mode   → flingAllMode ("TP"/"Tween")
+    Line 1354       Toggle   — Fling All        → setFlingAllToggle
+    Line 1361       Toggle   — NEW_AntiFling    → setNewAntiFlingToggle
+
+  Line 1365       Section: Server
+    Line 1370       Button — Rejoin             → doRejoin
+    Line 1375       Button — Server Hop         → doServerHop
+
+  Line 1378       Section: Settings
+    Line 1383       Button — Set Menu Key       → listens InputBegan, saves key
+    Line 1403       Button — Reset All Settings → resets all to default
+    Line 1437       Button — Kill Script        → killScript()
+
+──────────────────────────────────────────────────────────────────────────────
+  BLOCK 7 · Scripts Tab UI                                 Lines 1441–1460
+──────────────────────────────────────────────────────────────────────────────
+
+  Line 1441       local ScriptsTab = Window:CreateTab("Scripts")
+  Line 1443       Section: Click to Execute
+  Line 1445-1460  for loop — 19 buttons, each calls loadstring(scriptData.code)()
+
+──────────────────────────────────────────────────────────────────────────────
+  BLOCK 8 · Executor Tab UI                                Lines 1462–1510
+──────────────────────────────────────────────────────────────────────────────
+
+  Line 1462       local ExecutorTab = Window:CreateTab("Executor")
+  Line 1464       Section: Custom Lua Executor
+  Line 1466       Input  — Lua Code  (up to 5000 chars)
+  Line 1474       Button — Execute Code  → loadstring(execCode)()
+  Line 1497       Button — Clear Code
+
+──────────────────────────────────────────────────────────────────────────────
+  BLOCK 9 · Kill Script                                    Lines 1512–1606
+──────────────────────────────────────────────────────────────────────────────
+
+  Line 1512       killScript = function()
+  Line 1515       Step 1 — stops every feature (all set*Toggle(false) + stopTweenTP)
+  Line 1531       Step 2 — hard-restores character (WalkSpeed 16, JumpPower 50,
+                           PlatformStand false, removes BodyMovers, CanCollide true)
+  Line 1556       Step 3 — destroys all USHESP / USHESPBill from other characters
+  Line 1569       Step 4 — destroys floating N button (_floatGui)
+  Line 1581       Step 5 — destroys Rayfield from PlayerGui and CoreGui
+
+──────────────────────────────────────────────────────────────────────────────
+  BLOCK 10 · Auto Re-execute on Teleport                   Lines 1608–1631
+──────────────────────────────────────────────────────────────────────────────
+
+  Line 1610       LOADER_URL constant (raw GitHub URL for loader.lua)
+  Line 1612       Players.LocalPlayer.OnTeleport:Connect
+                    TeleportState.Started  → task.delay 4s → reload hub
+                    TeleportState.Failed   → retry Teleport after 2s
+
+──────────────────────────────────────────────────────────────────────────────
+  BLOCK 11 · Network Ping Monitor                          Lines 1633–1658
+──────────────────────────────────────────────────────────────────────────────
+
+  Line 1633       task.spawn  — polls GetNetworkPing() every 8 seconds
+                  If ping > 5 → notifies + auto-rejoins via Teleport
+
+──────────────────────────────────────────────────────────────────────────────
+  BLOCK 12 · Floating "N" Toggle Button                    Lines 1660–1774
+──────────────────────────────────────────────────────────────────────────────
+
+  Line 1660       task.spawn  — waits 2s for Rayfield to build GUI
+  Line 1672       FloatGui ScreenGui created ("USHFloatBtn"), _floatGui assigned
+  Line 1680       Ring frame (56×56 gradient circle, pulsing tween)
+  Line 1699       Btn TextButton ("N") inside Ring
+  Line 1713       pulseRing()  — infinite BackgroundTransparency tween
+  Line 1718       updateBtnVisual()  — syncs N button colour to hubVisible state
+  Line 1731       toggleHub()  — calls toggleRayfieldUI() + updateBtnVisual()
+  Line 1738       Btn.InputBegan  — records drag start position
+  Line 1748       UserInputService.InputChanged  — drags Ring if delta > 6px
+  Line 1763       UserInputService.InputEnded
+                    Short tap (no drag) → toggleHub()
+                    End of drag → clears drag state
+
+================================================================================
+  SETTINGS FILE  (universal_sun_hub_settings.txt)
+================================================================================
+
+  Written by saveSettings()  on every change.
+  Read by the pcall block (lines 73-99) on startup.
+
+  Keys saved:
+    menuKey           LeftControl (default)
+    ijEnabled         false
+    speedEnabled      false
+    speedVal          16
+    spinEnabled       false
+    spinSpeedVal      20
+    noclipEnabled     false
+    flyEnabled        false
+    flySpeedVal       50
+    espEnabled        false
+    hitboxEnabled     false
+    hitboxSizeVal     5
+    flingEnabled      false
+    fullBrightEnabled false
+    aimbotEnabled     false
+    aimbotMode        Nearest
+    aimbotTarget      (empty)
+    flingAllMode      TP
+    tweenTPTarget     (empty)
+    tweenTPSpeed      50
+
+================================================================================
+  QUICK LOOKUP  —  "Where is X?"
+================================================================================
+
+  Noclip logic start             loader.lua  line 216
+  Fly logic start                loader.lua  line 251
+  Fly key controls (WASD/Q/E)    loader.lua  line 245
+  Speed / WalkSpeed logic        loader.lua  line 159
+  Infinite Jump logic            loader.lua  line 138
+  Spin logic                     loader.lua  line 183
+  ESP logic                      loader.lua  line 352
+  Hitbox logic                   loader.lua  line 414
+  WalkFling logic                loader.lua  line 471
+  Full Bright logic              loader.lua  line 536
+  cam_aimbot logic               loader.lua  line 598
+  NoFall logic                   loader.lua  line 653
+  Wall Walk logic                loader.lua  line 682
+  Zero Gravity logic             loader.lua  line 723
+  Fling All logic                loader.lua  line 788
+  Tween TP logic                 loader.lua  line 836
+  NEW_AntiFling logic            loader.lua  line 894
+  Target TP                      loader.lua  line 918
+  Target Fling                   loader.lua  line 935
+  Rejoin                         loader.lua  line 950
+  Server Hop                     loader.lua  line 959
+  Rayfield library loaded        loader.lua  line 1032
+  Home Tab UI start              loader.lua  line 1060
+  Scripts Tab UI start           loader.lua  line 1441
+  Executor Tab UI start          loader.lua  line 1462
+  Kill Script                    loader.lua  line 1512
+  N button / floating toggle     loader.lua  line 1660
+  Auto-reload on teleport        loader.lua  line 1610
+  Ping monitor                   loader.lua  line 1633
+  Confirm dialog (boot)          loader_to_run_main.lua  line 26
+  Progress bar (boot)            loader_to_run_main.lua  line 155
+  GitHub fetch (boot)            loader_to_run_main.lua  line 280
+  loadstring / run hub (boot)    loader_to_run_main.lua  line 297
+
+================================================================================
