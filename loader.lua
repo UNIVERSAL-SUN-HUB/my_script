@@ -636,6 +636,244 @@ local function setAimbotToggle(state)
     if state then startAimbot() else stopAimbot() end
 end
 
+-- ── NoFall ────────────────────────────────────
+local noFallEnabled = false
+local noFallConn    = nil
+
+local function setNoFallToggle(state)
+    noFallEnabled = state
+    if state then
+        noFallConn = RunService.Heartbeat:Connect(function()
+            local char = Players.LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local root = char.HumanoidRootPart
+                local vel  = root.AssemblyLinearVelocity
+                if vel.Y < -40 then
+                    root.AssemblyLinearVelocity = Vector3.new(vel.X, -40, vel.Z)
+                end
+            end
+        end)
+    else
+        if noFallConn then noFallConn:Disconnect() noFallConn = nil end
+    end
+end
+
+Players.LocalPlayer.CharacterAdded:Connect(function()
+    if noFallEnabled then
+        if noFallConn then noFallConn:Disconnect() noFallConn = nil end
+        setNoFallToggle(true)
+    end
+end)
+
+-- ── Wall Walk ─────────────────────────────────
+local wallWalkEnabled = false
+local wallWalkConn    = nil
+
+local function setWallWalkToggle(state)
+    wallWalkEnabled = state
+    if state then
+        wallWalkConn = RunService.RenderStepped:Connect(function()
+            local char = Players.LocalPlayer.Character
+            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+            local hum  = char and char:FindFirstChildOfClass("Humanoid")
+            if not (char and hrp and hum) then return end
+            local params = RaycastParams.new()
+            params.FilterDescendantsInstances = { char }
+            params.FilterType = Enum.RaycastFilterType.Exclude
+            local result = workspace:Raycast(hrp.Position, hrp.CFrame.LookVector * 2.5, params)
+            if result and hum.MoveDirection.Magnitude > 0 then
+                hrp.Velocity = Vector3.new(hrp.Velocity.X, hum.WalkSpeed * 1.5, hrp.Velocity.Z)
+                if hum:GetState() ~= Enum.HumanoidStateType.Climbing then
+                    hum:ChangeState(Enum.HumanoidStateType.Climbing)
+                end
+            end
+        end)
+    else
+        if wallWalkConn then wallWalkConn:Disconnect() wallWalkConn = nil end
+        local char = Players.LocalPlayer.Character
+        local hum  = char and char:FindFirstChildOfClass("Humanoid")
+        if hum and hum:GetState() == Enum.HumanoidStateType.Climbing then
+            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end
+    end
+end
+
+Players.LocalPlayer.CharacterAdded:Connect(function()
+    if wallWalkEnabled then
+        if wallWalkConn then wallWalkConn:Disconnect() wallWalkConn = nil end
+        task.wait(0.3)
+        setWallWalkToggle(true)
+    end
+end)
+
+-- ── Zero Gravity ──────────────────────────────
+local zeroGravEnabled = false
+local zeroGravConn    = nil
+local zeroGravForce   = nil
+local zeroGravAttach  = nil
+local ZG_MAX_SPEED    = 40
+
+local function setZeroGravToggle(state)
+    zeroGravEnabled = state
+    local char = Players.LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local hum  = char and char:FindFirstChildOfClass("Humanoid")
+    if not (root and hum) then return end
+    if state then
+        hum.PlatformStand = true
+        if root:FindFirstChild("USHZeroGravAttach") then root.USHZeroGravAttach:Destroy() end
+        zeroGravAttach      = Instance.new("Attachment", root)
+        zeroGravAttach.Name = "USHZeroGravAttach"
+        zeroGravForce = Instance.new("VectorForce", root)
+        zeroGravForce.Attachment0          = zeroGravAttach
+        zeroGravForce.RelativeTo           = Enum.ActuatorRelativeTo.World
+        zeroGravForce.ApplyAtCenterOfMass  = true
+        local totalMass = 0
+        for _, p in pairs(char:GetDescendants()) do
+            if p:IsA("BasePart") then totalMass = totalMass + p.Mass end
+        end
+        zeroGravForce.Force = Vector3.new(0, totalMass * workspace.Gravity, 0)
+        root.AssemblyLinearVelocity = workspace.CurrentCamera.CFrame.LookVector * 5
+        zeroGravConn = RunService.RenderStepped:Connect(function()
+            if not zeroGravEnabled or not root or not root.Parent then return end
+            local cam      = workspace.CurrentCamera
+            local moveDir  = hum.MoveDirection
+            if moveDir.Magnitude > 0 then
+                local look  = cam.CFrame.LookVector
+                local right = cam.CFrame.RightVector
+                local fLook  = Vector3.new(look.X, 0, look.Z)
+                local fRight = Vector3.new(right.X, 0, right.Z)
+                if fLook.Magnitude  > 0 then fLook  = fLook.Unit  end
+                if fRight.Magnitude > 0 then fRight = fRight.Unit end
+                local floatDir = (look * moveDir:Dot(fLook)) + (right * moveDir:Dot(fRight))
+                if floatDir.Magnitude > 0 then
+                    root.AssemblyLinearVelocity = root.AssemblyLinearVelocity + (floatDir.Unit * 1.5)
+                end
+            end
+            if root.AssemblyLinearVelocity.Magnitude > ZG_MAX_SPEED then
+                root.AssemblyLinearVelocity = root.AssemblyLinearVelocity.Unit * ZG_MAX_SPEED
+            end
+            root.AssemblyLinearVelocity = root.AssemblyLinearVelocity:Lerp(Vector3.zero, 0.02)
+        end)
+    else
+        if zeroGravConn   then zeroGravConn:Disconnect()   zeroGravConn   = nil end
+        if zeroGravForce  then zeroGravForce:Destroy()     zeroGravForce  = nil end
+        if zeroGravAttach then zeroGravAttach:Destroy()    zeroGravAttach = nil end
+        hum.PlatformStand = false
+        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+end
+
+Players.LocalPlayer.CharacterAdded:Connect(function()
+    if zeroGravEnabled then task.wait(0.3) setZeroGravToggle(true) end
+end)
+
+-- ── NEW_AntiFling ─────────────────────────────
+-- Makes other players' parts non-colliding with you (you phase through them)
+local newAntiFlingEnabled = false
+local newAntiFlingConn    = nil
+
+local function setNewAntiFlingToggle(state)
+    newAntiFlingEnabled = state
+    if state then
+        newAntiFlingConn = RunService.Stepped:Connect(function()
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr ~= Players.LocalPlayer and plr.Character then
+                    for _, part in pairs(plr.Character:GetChildren()) do
+                        if part:IsA("BasePart") and part.CanCollide then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end
+        end)
+    else
+        if newAntiFlingConn then newAntiFlingConn:Disconnect() newAntiFlingConn = nil end
+    end
+end
+
+-- ── Target TP ─────────────────────────────────
+local function doTargetTP()
+    local plr = Players:FindFirstChild(aimbotTarget)
+    if not plr or not plr.Character then
+        Rayfield:Notify({ Title = "Target TP", Content = "Select a target player first.", Duration = 3 })
+        return
+    end
+    local root   = plr.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    local myChar = Players.LocalPlayer.Character
+    local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    if myRoot then
+        myRoot.CFrame = root.CFrame + Vector3.new(2, 0, 0)
+        Rayfield:Notify({ Title = "Target TP", Content = "Teleported to: " .. plr.Name, Duration = 2 })
+    end
+end
+
+-- ── Target Fling ──────────────────────────────
+local function doTargetFling()
+    local plr = Players:FindFirstChild(aimbotTarget)
+    if not plr or not plr.Character then
+        Rayfield:Notify({ Title = "Target Fling", Content = "Select a target player first.", Duration = 3 })
+        return
+    end
+    local root = plr.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    pcall(function()
+        root.Velocity = Vector3.new(math.random(-500,500), 1000, math.random(-500,500))
+    end)
+    Rayfield:Notify({ Title = "Target Fling", Content = "Flung: " .. plr.Name, Duration = 2 })
+end
+
+-- ── Rejoin ────────────────────────────────────
+local function doRejoin()
+    Rayfield:Notify({ Title = "Rejoin", Content = "Rejoining server...", Duration = 3 })
+    task.wait(0.5)
+    pcall(function()
+        game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, Players.LocalPlayer)
+    end)
+end
+
+-- ── Server Hop ────────────────────────────────
+local function doServerHop()
+    Rayfield:Notify({ Title = "Server Hop", Content = "Searching for a new server...", Duration = 3 })
+    task.spawn(function()
+        local TeleportService = game:GetService("TeleportService")
+        local HttpService     = game:GetService("HttpService")
+        local validServers    = {}
+        pcall(function()
+            local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
+            local responseText = ""
+            local HttpReq = (request or http_request or (syn and syn.request))
+            if HttpReq then
+                local res = HttpReq({ Url = url, Method = "GET" })
+                if res and res.Body then responseText = res.Body end
+            else
+                responseText = game:HttpGet(url)
+            end
+            if responseText ~= "" then
+                local data = HttpService:JSONDecode(responseText)
+                if data and data.data then
+                    for _, srv in ipairs(data.data) do
+                        if type(srv) == "table" and srv.id ~= game.JobId
+                        and tonumber(srv.playing) and tonumber(srv.maxPlayers)
+                        and srv.playing < (srv.maxPlayers - 1) then
+                            table.insert(validServers, srv.id)
+                        end
+                    end
+                end
+            end
+        end)
+        if #validServers > 0 then
+            local pick = validServers[math.random(1, #validServers)]
+            Rayfield:Notify({ Title = "Server Hop", Content = "Found a server! Teleporting...", Duration = 3 })
+            task.wait(0.5)
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, pick, Players.LocalPlayer)
+        else
+            Rayfield:Notify({ Title = "Server Hop", Content = "No other servers found.", Duration = 3 })
+        end
+    end)
+end
+
 -- ──────────────────────────────────────────────
 -- Kill Script  (forward declaration — assigned after all features)
 -- ──────────────────────────────────────────────
@@ -945,14 +1183,14 @@ FeaturesTab:CreateToggle({
 FeaturesTab:CreateSection("Cheats")
 
 FeaturesTab:CreateToggle({
-    Name         = "🎯  Aimbot",
+    Name         = "🎯  cam_aimbot",
     CurrentValue = settings.aimbotEnabled,
     Flag         = "Aimbot",
     Callback     = function(Value) setAimbotToggle(Value) end,
 })
 
 FeaturesTab:CreateDropdown({
-    Name            = "🎯  Aimbot Mode",
+    Name            = "🎯  cam_aimbot Mode",
     Options         = { "Nearest", "Target" },
     CurrentOption   = { settings.aimbotMode },
     MultipleOptions = false,
@@ -1013,6 +1251,60 @@ FeaturesTab:CreateButton({
             Duration = 6,
         })
     end,
+})
+
+FeaturesTab:CreateButton({
+    Name     = "📍  Target TP  (teleport to selected target)",
+    Callback = function() doTargetTP() end,
+})
+
+FeaturesTab:CreateButton({
+    Name     = "💨  Target Fling  (fling selected target)",
+    Callback = function() doTargetFling() end,
+})
+
+FeaturesTab:CreateSection("NEW Features — Movement")
+
+FeaturesTab:CreateToggle({
+    Name         = "🪂  NoFall  (cap fall speed, no fall damage)",
+    CurrentValue = false,
+    Flag         = "NoFall",
+    Callback     = function(Value) setNoFallToggle(Value) end,
+})
+
+FeaturesTab:CreateToggle({
+    Name         = "🕷️  Wall Walk  (climb walls by walking into them)",
+    CurrentValue = false,
+    Flag         = "WallWalk",
+    Callback     = function(Value) setWallWalkToggle(Value) end,
+})
+
+FeaturesTab:CreateToggle({
+    Name         = "🚀  Zero Gravity  (float in 3D space, WASD to move)",
+    CurrentValue = false,
+    Flag         = "ZeroGravity",
+    Callback     = function(Value) setZeroGravToggle(Value) end,
+})
+
+FeaturesTab:CreateSection("NEW Features — Combat")
+
+FeaturesTab:CreateToggle({
+    Name         = "👻  NEW_AntiFling  (phase through other players)",
+    CurrentValue = false,
+    Flag         = "NewAntiFling",
+    Callback     = function(Value) setNewAntiFlingToggle(Value) end,
+})
+
+FeaturesTab:CreateSection("NEW Features — Server")
+
+FeaturesTab:CreateButton({
+    Name     = "🔄  Rejoin  (reconnect to this server)",
+    Callback = function() doRejoin() end,
+})
+
+FeaturesTab:CreateButton({
+    Name     = "🔀  Server Hop  (jump to a different server)",
+    Callback = function() doServerHop() end,
 })
 
 FeaturesTab:CreateSection("Settings")
@@ -1091,6 +1383,10 @@ killScript = function()
     pcall(function() setFlingToggle(false) end)
     pcall(function() setFullBrightToggle(false) end)
     pcall(function() setAimbotToggle(false) end)
+    pcall(function() setNoFallToggle(false) end)
+    pcall(function() setWallWalkToggle(false) end)
+    pcall(function() setZeroGravToggle(false) end)
+    pcall(function() setNewAntiFlingToggle(false) end)
 
     -- 2. Hard-restore the local character to a clean state
     pcall(function()
