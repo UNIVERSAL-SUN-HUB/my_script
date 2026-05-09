@@ -590,9 +590,14 @@ end
 -- ─────────────────────────────────────────────────
 makeDivider(pageFarm, "Auto Farm", 1)
 
-makeToggle(pageFarm, "Auto Farm", "Automatically kills nearby enemies for EXP", 2, function(v)
+local setAutoFarmToggle = makeToggle(pageFarm, "Auto Farm", "Toggle with L key — drags NPC & holds M1 on it", 2, function(v)
     State.autoFarm = v
-    toast(v and "Auto Farm ON" or "Auto Farm OFF")
+    if not v then
+        -- release M1 when turning off so mouse is freed
+        pcall(function() if mouse1release then mouse1release() end end)
+        farmTarget = nil
+    end
+    toast(v and "Auto Farm ON  (L to stop)" or "Auto Farm OFF")
 end)
 
 makeToggle(pageFarm, "Auto Boss", "Automatically targets and attacks boss enemies", 4, function(v)
@@ -789,80 +794,82 @@ end)
 -- ─────────────────────────────────────────────────
 local farmTarget = nil
 local auraTarget = nil
+local Camera     = workspace.CurrentCamera
 
 -- ─────────────────────────────────────────────────
---  Real M1 click — uses executor mouse1click() so
---  the game registers it as a genuine left-click hit.
---  Falls back to tool:Activate() if not available.
+--  Aim mouse at exact world position on screen
+--  so M1 always lands on the NPC body, never misfires
 -- ─────────────────────────────────────────────────
-local function doM1()
-    -- Method 1: executor mouse1click (most compatible)
-    if mouse1click then
-        pcall(mouse1click)
-    elseif mouse1press then
-        pcall(mouse1press)
-        pcall(mouse1release)
-    end
-    -- Method 2: tool activate (always fires alongside)
+local function aimMouseAt(worldPos)
+    pcall(function()
+        local screenPos, onScreen = Camera:WorldToScreenPoint(worldPos)
+        if onScreen then
+            -- Move the executor mouse to that exact screen pixel
+            if mousemoveabs then
+                mousemoveabs(screenPos.X, screenPos.Y)
+            elseif mousemoverel then
+                -- relative fallback: delta from screen centre
+                local cx = Camera.ViewportSize.X / 2
+                local cy = Camera.ViewportSize.Y / 2
+                mousemoverel(screenPos.X - cx, screenPos.Y - cy)
+            end
+        end
+    end)
+end
+
+-- ─────────────────────────────────────────────────
+--  Hold M1 continuously at NPC position
+--  (game sees a real, uninterrupted left-click hold)
+-- ─────────────────────────────────────────────────
+local m1Held = false
+local function startHoldM1()
+    if m1Held then return end
+    m1Held = true
+    pcall(function()
+        if mouse1press then mouse1press()
+        elseif mouse1click then mouse1click() end
+    end)
+    -- Also activate tool so ability fires on hold
     pcall(function()
         local tool = char:FindFirstChildOfClass("Tool")
         if tool then tool:Activate() end
     end)
-    -- Method 3: fire known attack remotes
+end
+
+local function stopHoldM1()
+    if not m1Held then return end
+    m1Held = false
     pcall(function()
-        for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-            if v:IsA("RemoteEvent") then
-                local n = v.Name:lower()
-                if n:find("attack") or n:find("m1") or n:find("punch")
-                or n:find("hit") or n:find("swing") or n:find("damage") then
-                    v:FireServer()
-                    break
-                end
-            end
+        if mouse1release then mouse1release() end
+    end)
+end
+
+-- Re-press M1 rapidly (for games that need repeated clicks not hold)
+local function clickM1()
+    pcall(function()
+        if mouse1click then
+            mouse1click()
+        elseif mouse1press then
+            mouse1press()
+            task.wait()
+            mouse1release()
         end
+    end)
+    pcall(function()
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool then tool:Activate() end
     end)
 end
 
 -- ─────────────────────────────────────────────────
---  Expand NPC hitbox so clicks always land
--- ─────────────────────────────────────────────────
-local expandedNPCs = {}
-local function expandHitbox(npcRoot)
-    if not npcRoot or expandedNPCs[npcRoot] then return end
-    expandedNPCs[npcRoot] = npcRoot.Size
-    pcall(function() npcRoot.Size = Vector3.new(12, 12, 12) end)
-    -- Also expand all parts in the NPC model
-    pcall(function()
-        for _, p in ipairs(npcRoot.Parent:GetDescendants()) do
-            if p:IsA("BasePart") and p ~= npcRoot then
-                p.Size = Vector3.new(
-                    math.max(p.Size.X, 6),
-                    math.max(p.Size.Y, 6),
-                    math.max(p.Size.Z, 6)
-                )
-            end
-        end
-    end)
-end
-
-local function restoreHitbox(npcRoot)
-    if not npcRoot or not expandedNPCs[npcRoot] then return end
-    pcall(function() npcRoot.Size = expandedNPCs[npcRoot] end)
-    expandedNPCs[npcRoot] = nil
-end
-
--- ─────────────────────────────────────────────────
---  Drag NPC to player — pulls the NPC's rootpart
---  directly in front of the player every frame so
---  it cannot walk away
+--  Drag NPC to player — locks NPC directly in front
+--  of player every frame; zeros velocity so it
+--  cannot walk or slide away at all
 -- ─────────────────────────────────────────────────
 local function dragNPCToPlayer(npcRoot)
     if not npcRoot or not npcRoot.Parent then return end
     pcall(function()
-        -- Place NPC right in front of player at same height
-        local targetCF = rootPart.CFrame * CFrame.new(0, 0, -3)
-        npcRoot.CFrame = targetCF
-        -- Kill its velocity so it can't slide away
+        npcRoot.CFrame = rootPart.CFrame * CFrame.new(0, 0, -3)
         npcRoot.AssemblyLinearVelocity  = Vector3.zero
         npcRoot.AssemblyAngularVelocity = Vector3.zero
     end)
@@ -903,10 +910,32 @@ local function getNearestBoss()
 end
 
 -- ─────────────────────────────────────────────────
---  ══ Heartbeat — Inf Jump / Speed / NPC drag ══
---  Only lightweight per-frame work here to avoid lag
+--  L key — toggles Auto Farm on/off in-game
+-- ─────────────────────────────────────────────────
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.L then
+        -- flip the state and drive the UI toggle
+        local newVal = not State.autoFarm
+        if setAutoFarmToggle then
+            setAutoFarmToggle(newVal)
+        else
+            State.autoFarm = newVal
+            if not newVal then stopHoldM1(); farmTarget = nil end
+        end
+        toast(newVal and "Auto Farm ON  (L to stop)" or "Auto Farm OFF")
+    end
+end)
+
+-- ─────────────────────────────────────────────────
+--  ══ Heartbeat — per-frame work ══
+--  1. Inf jump / speed
+--  2. Drag NPC to player (position lock)
+--  3. Aim mouse at exact NPC screen point so
+--     the held M1 never drifts off target
 -- ─────────────────────────────────────────────────
 RunService.Heartbeat:Connect(function()
+    -- Infinite jump
     if State.infJump then
         pcall(function()
             if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
@@ -915,61 +944,77 @@ RunService.Heartbeat:Connect(function()
         end)
     end
 
+    -- Speed persistence
     if State.speedEnabled then
         pcall(function() humanoid.WalkSpeed = State.speedValue end)
     end
 
-    -- Drag farm NPC to player every frame so it can't escape
+    -- Auto Farm: drag NPC to player AND keep mouse pinned on its chest
     if State.autoFarm and farmTarget and farmTarget.Parent
     and farmTarget.Parent:FindFirstChildOfClass("Humanoid")
     and farmTarget.Parent:FindFirstChildOfClass("Humanoid").Health > 0 then
         dragNPCToPlayer(farmTarget)
+        -- Aim at chest level (slightly above root centre)
+        local chestPos = farmTarget.Position + Vector3.new(0, 0.5, 0)
+        aimMouseAt(chestPos)
+        -- Keep character facing the NPC
+        pcall(function()
+            rootPart.CFrame = CFrame.lookAt(rootPart.Position, farmTarget.Position)
+        end)
+    elseif State.autoFarm then
+        -- Target gone — release M1 briefly so game re-registers next press
+        stopHoldM1()
     end
 
-    -- Drag boss NPC to player every frame
+    -- Auto Boss: same drag + aim logic
     if State.autoBoss and auraTarget and auraTarget.Parent
     and auraTarget.Parent:FindFirstChildOfClass("Humanoid")
     and auraTarget.Parent:FindFirstChildOfClass("Humanoid").Health > 0 then
         dragNPCToPlayer(auraTarget)
+        aimMouseAt(auraTarget.Position + Vector3.new(0, 0.5, 0))
+        pcall(function()
+            rootPart.CFrame = CFrame.lookAt(rootPart.Position, auraTarget.Position)
+        end)
+    elseif State.autoBoss then
+        stopHoldM1()
     end
 end)
 
 -- ─────────────────────────────────────────────────
---  ══ M1 Spam loop — 0.07s tick ══
---  Rapid left-click attacks on locked NPC
+--  ══ Combat loop — 0.06s tick ══
+--  Manages target selection and M1 hold/click.
+--  Mouse is already aimed at the NPC by Heartbeat;
+--  this loop just ensures M1 stays pressed and
+--  re-clicks every tick for games that need it.
 -- ─────────────────────────────────────────────────
 task.spawn(function()
-    while task.wait(0.07) do
+    while task.wait(0.06) do
 
-        -- AUTO FARM
+        -- ── AUTO FARM ──────────────────────────────
         if State.autoFarm then
             pcall(function()
-                -- Refresh target if dead or gone
+                -- Refresh dead/gone target
                 if not farmTarget or not farmTarget.Parent
                 or not farmTarget.Parent:FindFirstChildOfClass("Humanoid")
                 or farmTarget.Parent:FindFirstChildOfClass("Humanoid").Health <= 0 then
-                    -- Restore old hitbox before switching
-                    if farmTarget then restoreHitbox(farmTarget) end
+                    stopHoldM1()
                     farmTarget = getNearestNPC(8000)
-                    if farmTarget then expandHitbox(farmTarget) end
                 end
+
                 if farmTarget then
-                    -- Face NPC and spam M1
-                    pcall(function()
-                        rootPart.CFrame = CFrame.lookAt(
-                            rootPart.Position,
-                            farmTarget.Position
-                        )
-                    end)
-                    doM1()
+                    -- Hold M1 continuously (game sees unbroken left-click on NPC)
+                    startHoldM1()
+                    -- Also send a discrete click each tick for combo-based games
+                    clickM1()
                 end
             end)
         else
-            if farmTarget then restoreHitbox(farmTarget) end
+            stopHoldM1()
             farmTarget = nil
         end
 
-        -- KILL AURA — drag nearest in-range NPC and spam M1
+        -- ── KILL AURA ──────────────────────────────
+        -- Drag nearest in-range NPC to player, aim precisely, click M1
         if State.killAura then
             pcall(function()
                 local best, bestDist = nil, math.huge
@@ -985,39 +1030,34 @@ task.spawn(function()
                     end
                 end
                 if best then
-                    expandHitbox(best)
                     dragNPCToPlayer(best)
+                    aimMouseAt(best.Position + Vector3.new(0, 0.5, 0))
                     pcall(function()
                         rootPart.CFrame = CFrame.lookAt(rootPart.Position, best.Position)
                     end)
-                    doM1()
+                    clickM1()
                 end
             end)
         end
 
-        -- AUTO BOSS
+        -- ── AUTO BOSS ──────────────────────────────
         if State.autoBoss then
             pcall(function()
                 if not auraTarget or not auraTarget.Parent
                 or not auraTarget.Parent:FindFirstChildOfClass("Humanoid")
                 or auraTarget.Parent:FindFirstChildOfClass("Humanoid").Health <= 0 then
-                    if auraTarget then restoreHitbox(auraTarget) end
+                    stopHoldM1()
                     auraTarget = getNearestBoss()
-                    if auraTarget then expandHitbox(auraTarget) end
                 end
                 if auraTarget then
-                    pcall(function()
-                        rootPart.CFrame = CFrame.lookAt(
-                            rootPart.Position,
-                            auraTarget.Position
-                        )
-                    end)
-                    doM1()
+                    startHoldM1()
+                    clickM1()
                 end
             end)
         else
-            if auraTarget then restoreHitbox(auraTarget) end
-            auraTarget = nil
+            if State.autoBoss == false then
+                auraTarget = nil
+            end
         end
 
     end
