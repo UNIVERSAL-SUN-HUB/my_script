@@ -610,12 +610,31 @@ end)
 
 makeDivider(pageFarm, "Quests", 6)
 
-makeButton(pageFarm, "Auto Complete Quest", "Fires the quest-complete remote for active quest", 7, function()
+makeButton(pageFarm, "Auto Complete Quest", "Clicks quest buttons & fires quest remotes", 7, function()
     toast("Attempting quest complete...")
     pcall(function()
+        -- 1) Click any visible quest-related GUI button
+        local keywords = {"complete", "claim", "quest", "accept", "finish", "submit", "turn"}
+        for _, v in ipairs(player.PlayerGui:GetDescendants()) do
+            if (v:IsA("TextButton") or v:IsA("ImageButton")) and v.Visible then
+                local t = (v.Text or ""):lower()
+                for _, kw in ipairs(keywords) do
+                    if t:find(kw) then
+                        v.MouseButton1Click:Fire()
+                        task.wait(0.05)
+                        break
+                    end
+                end
+            end
+        end
+        -- 2) Fire any quest/claim/complete remotes
         for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-            if v:IsA("RemoteEvent") and v.Name:lower():find("quest") then
-                v:FireServer()
+            if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
+                local n = v.Name:lower()
+                if n:find("quest") or n:find("claim") or n:find("complete") or n:find("finish") or n:find("submit") then
+                    if v:IsA("RemoteEvent") then v:FireServer()
+                    else pcall(function() v:InvokeServer() end) end
+                end
             end
         end
     end)
@@ -678,16 +697,22 @@ end)
 
 makeDivider(pageCombat, "Utilities", 4)
 
-makeButton(pageCombat, "Kill All Near Me", "One-shot kills all NPCs near your character", 5, function()
-    toast("Killing nearby NPCs...")
-    pcall(function()
-        for _, v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 then
-                local rp = v.Parent:FindFirstChild("HumanoidRootPart")
-                if rp and (rp.Position - rootPart.Position).Magnitude <= State.killAuraRange then
-                    v.Health = 0
+makeButton(pageCombat, "Kill All Near Me", "Rapidly M1-spams all NPCs in aura range", 5, function()
+    toast("Attacking nearby NPCs...")
+    task.spawn(function()
+        for i = 1, 30 do
+            pcall(function()
+                for _, v in ipairs(workspace:GetDescendants()) do
+                    if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 then
+                        local rp = v.Parent:FindFirstChild("HumanoidRootPart")
+                        if rp and (rp.Position - rootPart.Position).Magnitude <= State.killAuraRange then
+                            rootPart.CFrame = rp.CFrame * CFrame.new(0, 2.5, 0)
+                            fireM1(rp)
+                        end
+                    end
                 end
-            end
+            end)
+            task.wait(0.08)
         end
     end)
 end)
@@ -760,7 +785,82 @@ makeButton(pagePlayer, "Rejoin Server", "Leaves and rejoins the same game", 7, f
 end)
 
 -- ─────────────────────────────────────────────────
+--  Shared target references (set by farm/aura loops)
+-- ─────────────────────────────────────────────────
+local farmTarget = nil   -- RootPart of current farm NPC
+local auraTarget = nil   -- RootPart of current kill aura NPC
+
+-- ─────────────────────────────────────────────────
+--  M1 Spam helper — activates equipped tool properly
+--  so the server registers damage and gives rewards
+-- ─────────────────────────────────────────────────
+local function fireM1(targetRoot)
+    pcall(function()
+        -- Face the target
+        if targetRoot then
+            rootPart.CFrame = CFrame.lookAt(rootPart.Position, targetRoot.Position)
+        end
+        -- 1) Activate the equipped tool (main approach — server-sided)
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool then
+            tool:Activate()
+        end
+        -- 2) Also fire any attack/hit/m1/punch remotes as fallback
+        for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+            if v:IsA("RemoteEvent") then
+                local n = v.Name:lower()
+                if n:find("attack") or n:find("m1") or n:find("punch")
+                or n:find("hit") or n:find("swing") or n:find("damage") then
+                    if targetRoot then
+                        v:FireServer(targetRoot.Parent, targetRoot.CFrame.Position)
+                    else
+                        v:FireServer()
+                    end
+                    break
+                end
+            end
+        end
+    end)
+end
+
+-- ─────────────────────────────────────────────────
+--  Find nearest valid NPC
+-- ─────────────────────────────────────────────────
+local function getNearestNPC(maxHp)
+    local best, bestDist = nil, math.huge
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 then
+            local rp = v.Parent:FindFirstChild("HumanoidRootPart")
+            if rp then
+                local inHpRange = (maxHp == nil) or (v.MaxHealth <= maxHp)
+                if inHpRange then
+                    local d = (rp.Position - rootPart.Position).Magnitude
+                    if d < bestDist then bestDist = d; best = rp end
+                end
+            end
+        end
+    end
+    return best
+end
+
+local function getNearestBoss()
+    local best, bestDist = nil, math.huge
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 and v.MaxHealth > 5000 then
+            local rp = v.Parent:FindFirstChild("HumanoidRootPart")
+            if rp then
+                local d = (rp.Position - rootPart.Position).Magnitude
+                if d < bestDist then bestDist = d; best = rp end
+            end
+        end
+    end
+    return best
+end
+
+-- ─────────────────────────────────────────────────
 --  ══ RunService Loop ══
+--  Runs every frame: pins character on top of targets
+--  and handles inf jump / speed. Kept minimal to avoid lag.
 -- ─────────────────────────────────────────────────
 RunService.Heartbeat:Connect(function()
     -- Infinite Jump
@@ -777,85 +877,115 @@ RunService.Heartbeat:Connect(function()
         pcall(function() humanoid.WalkSpeed = State.speedValue end)
     end
 
-    -- Kill Aura
-    if State.killAura then
+    -- Pin ON TOP of farm target so NPC can't run away
+    if State.autoFarm and farmTarget and farmTarget.Parent and farmTarget.Parent:FindFirstChildOfClass("Humanoid") then
         pcall(function()
-            for _, v in ipairs(workspace:GetDescendants()) do
-                if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 then
-                    local rp = v.Parent:FindFirstChild("HumanoidRootPart")
-                    if rp and (rp.Position - rootPart.Position).Magnitude <= State.killAuraRange then
-                        v.Health = 0
-                    end
-                end
-            end
+            rootPart.CFrame = farmTarget.CFrame * CFrame.new(0, 2.5, 0)
+        end)
+    end
+
+    -- Pin ON TOP of boss target
+    if State.autoBoss and auraTarget and auraTarget.Parent and auraTarget.Parent:FindFirstChildOfClass("Humanoid") then
+        pcall(function()
+            rootPart.CFrame = auraTarget.CFrame * CFrame.new(0, 2.5, 0)
         end)
     end
 end)
 
--- Auto Farm / Auto Boss / Auto Roll / Auto Spin loop (0.5s tick)
+-- ─────────────────────────────────────────────────
+--  M1 spam loop — 0.1s tick (separate from Heartbeat
+--  to avoid frame-rate lag while still being fast)
+-- ─────────────────────────────────────────────────
 task.spawn(function()
-    while task.wait(0.5) do
-        -- Auto Farm: walk to nearest enemy and fire hit remote
+    while task.wait(0.1) do
+        -- Auto Farm M1 spam
         if State.autoFarm then
             pcall(function()
-                local target = nil
-                local dist   = math.huge
+                -- Pick or refresh target
+                if not farmTarget or not farmTarget.Parent
+                or not farmTarget.Parent:FindFirstChildOfClass("Humanoid")
+                or farmTarget.Parent:FindFirstChildOfClass("Humanoid").Health <= 0 then
+                    farmTarget = getNearestNPC(8000)
+                end
+                if farmTarget then
+                    fireM1(farmTarget)
+                end
+            end)
+        else
+            farmTarget = nil
+        end
+
+        -- Kill Aura M1 spam — uses tool activation, NOT Health=0
+        -- This ensures rewards are properly given by the server
+        if State.killAura then
+            pcall(function()
+                local best, bestDist = nil, math.huge
                 for _, v in ipairs(workspace:GetDescendants()) do
                     if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 then
                         local rp = v.Parent:FindFirstChild("HumanoidRootPart")
                         if rp then
                             local d = (rp.Position - rootPart.Position).Magnitude
-                            if d < dist and v.MaxHealth <= 3000 then
-                                dist = d; target = rp
+                            if d <= State.killAuraRange and d < bestDist then
+                                bestDist = d; best = rp
                             end
                         end
                     end
                 end
-                if target then
-                    rootPart.CFrame = target.CFrame + Vector3.new(0, 3, 0)
-                    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-                        if v:IsA("RemoteEvent") and (v.Name:lower():find("attack") or v.Name:lower():find("hit") or v.Name:lower():find("damage")) then
-                            v:FireServer(target.Parent)
-                            break
-                        end
+                if best then
+                    -- Teleport next to target (not on top, to avoid conflict with farm pin)
+                    if not State.autoFarm then
+                        rootPart.CFrame = best.CFrame * CFrame.new(0, 2.5, 0)
                     end
+                    fireM1(best)
                 end
             end)
         end
 
-        -- Auto Boss: same but targets high-HP enemies
+        -- Auto Boss M1 spam
         if State.autoBoss then
             pcall(function()
-                local target = nil
-                local dist   = math.huge
-                for _, v in ipairs(workspace:GetDescendants()) do
-                    if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 and v.MaxHealth > 5000 then
-                        local rp = v.Parent:FindFirstChild("HumanoidRootPart")
-                        if rp then
-                            local d = (rp.Position - rootPart.Position).Magnitude
-                            if d < dist then dist = d; target = rp end
-                        end
-                    end
+                if not auraTarget or not auraTarget.Parent
+                or not auraTarget.Parent:FindFirstChildOfClass("Humanoid")
+                or auraTarget.Parent:FindFirstChildOfClass("Humanoid").Health <= 0 then
+                    auraTarget = getNearestBoss()
                 end
-                if target then
-                    rootPart.CFrame = target.CFrame + Vector3.new(0, 3, 0)
-                    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-                        if v:IsA("RemoteEvent") and (v.Name:lower():find("attack") or v.Name:lower():find("hit")) then
-                            v:FireServer(target.Parent)
-                            break
-                        end
-                    end
+                if auraTarget then
+                    fireM1(auraTarget)
                 end
             end)
+        else
+            auraTarget = nil
         end
+    end
+end)
 
+-- ─────────────────────────────────────────────────
+--  Slow loop — Roll / Spin / Quest (0.4s tick)
+-- ─────────────────────────────────────────────────
+task.spawn(function()
+    while task.wait(0.4) do
         -- Auto Roll
         if State.autoRoll then
             pcall(function()
+                -- Try remotes first
                 for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if v:IsA("RemoteEvent") and (v.Name:lower():find("roll") or v.Name:lower():find("reroll")) then
-                        v:FireServer()
-                        break
+                    if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
+                        local n = v.Name:lower()
+                        if n:find("roll") or n:find("reroll") or n:find("ability") then
+                            if v:IsA("RemoteEvent") then v:FireServer()
+                            else pcall(function() v:InvokeServer() end) end
+                            break
+                        end
+                    end
+                end
+                -- Also try clicking any Roll button in PlayerGui
+                for _, v in ipairs(player.PlayerGui:GetDescendants()) do
+                    if v:IsA("TextButton") or v:IsA("ImageButton") then
+                        local t = v.Text and v.Text:lower() or ""
+                        if t:find("roll") or t:find("reroll") then
+                            v.MouseButton1Click:Fire()
+                            break
+                        end
                     end
                 end
             end)
@@ -865,9 +995,23 @@ task.spawn(function()
         if State.autoSpin then
             pcall(function()
                 for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if v:IsA("RemoteEvent") and v.Name:lower():find("spin") then
-                        v:FireServer()
-                        break
+                    if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
+                        local n = v.Name:lower()
+                        if n:find("spin") or n:find("wheel") then
+                            if v:IsA("RemoteEvent") then v:FireServer()
+                            else pcall(function() v:InvokeServer() end) end
+                            break
+                        end
+                    end
+                end
+                -- Also try clicking the spin/wheel button in GUI
+                for _, v in ipairs(player.PlayerGui:GetDescendants()) do
+                    if v:IsA("TextButton") or v:IsA("ImageButton") then
+                        local t = v.Text and v.Text:lower() or ""
+                        if t:find("spin") or t:find("wheel") then
+                            v.MouseButton1Click:Fire()
+                            break
+                        end
                     end
                 end
             end)
