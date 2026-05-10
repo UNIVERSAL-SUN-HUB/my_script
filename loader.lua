@@ -1588,6 +1588,22 @@ HomeTab:CreateParagraph({
         .. "Toggle the hub with " .. getKeyName(menuKey) .. " or the N button.",
 })
 
+-- ─── Blox Fruits ───────────────────────────────────────────────────────────
+HomeTab:CreateSection("Blox Fruits")
+
+HomeTab:CreateButton({
+    Name     = "🍎  Load Blox Fruits Hub  (Sun Hub Open Source)",
+    Callback = function()
+        local url = "https://raw.githubusercontent.com/naitikthakur8273-alt/my_script/main/blox%20fruits%20hub.lua"
+        local ok, err = pcall(function()
+            loadstring(game:HttpGet(url, true))()
+        end)
+        if not ok then
+            Rayfield:Notify({ Title = "Blox Fruits Hub", Content = "Failed to load: " .. tostring(err), Duration = 6 })
+        end
+    end,
+})
+
 -- ─── Movement ──────────────────────────────────────────────────────────────
 HomeTab:CreateSection("Movement")
 
