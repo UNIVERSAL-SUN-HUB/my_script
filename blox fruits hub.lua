@@ -1610,6 +1610,15 @@ end
 --// CHECK MONSTER
 function CheckLevel()
     local Lv = game:GetService("Players").LocalPlayer.Data.Level.Value
+    local _savedFirst, _savedSecond, _savedThird = First_Sea, Second_Sea, Third_Sea
+    if _G.SelectMonster and _G.SelectMonster ~= "" then
+        local lvNum = tonumber(_G.SelectMonster:match("%[Lv%. (%d+)%]") or _G.SelectMonster:match("%[(%d+)%]") or "")
+        if lvNum then
+            First_Sea  = lvNum < 700
+            Second_Sea = lvNum >= 700 and lvNum < 1500
+            Third_Sea  = lvNum >= 1500
+        end
+    end
     if First_Sea then
         if Lv == 1 or Lv <= 9 or _G.SelectMonster == "Bandit [Lv. 5]" then -- Bandit
             Ms = "Bandit"
@@ -2249,18 +2258,43 @@ function CheckLevel()
             CFrameMon = CFrame.new(-16654.7754, 105.286232, 1579.67444, 0.999096751, 4.45934489e-08, 0.0424928814, -4.38822667e-08, 1, -1.76692847e-08, -0.0424928814, 1.57886415e-08, 0.999096751)
         end
     end
+    First_Sea, Second_Sea, Third_Sea = _savedFirst, _savedSecond, _savedThird
 end
 
---// Select Monster
-if First_Sea then
-    tableMon = {"Bandit [Lv. 5]","Monkey [Lv. 14]","Gorilla [Lv. 20]","Pirate [Lv. 35]","Brute [Lv. 45]","Desert Bandit [Lv. 60]","Desert Officer [Lv. 70]","Snow Bandit [Lv. 90]","Snowman [Lv. 100]","Chief Petty Officer [Lv. 120]","Sky Bandit [Lv. 150]","Dark Master [Lv. 175]","Prisoner [Lv. 190]", "Dangerous Prisoner [Lv. 210]","Toga Warrior [Lv. 250]","Gladiator [Lv. 275]","Military Soldier [Lv. 300]","Military Spy [Lv. 325]","Fishman Warrior [Lv. 375]","Fishman Commando [Lv. 400]","God's Guard [Lv. 450]","Shanda [Lv. 475]","Royal Squad [Lv. 525]","Royal Soldier [Lv. 550]","Galley Pirate [Lv. 625]","Galley Captain [Lv. 650]"}
-elseif Second_Sea then
-    tableMon = {"Raider [Lv. 700]","Mercenary [Lv. 725]","Swan Pirate [Lv. 775]","Factory Staff [Lv. 800]","Marine Lieutenant [Lv. 875]","Marine Captain [Lv. 900]","Zombie [Lv. 950]","Vampire [Lv. 975]","Snow Trooper [Lv. 1000]","Winter Warrior [Lv. 1050]","Lab Subordinate [Lv. 1100]","Horned Warrior [Lv. 1125]","Magma Ninja [Lv. 1175]","Lava Pirate [Lv. 1200]","Ship Deckhand [Lv. 1250]","Ship Engineer [Lv. 1275]","Ship Steward [Lv. 1300]","Ship Officer [Lv. 1325]","Arctic Warrior [Lv. 1350]","Snow Lurker [Lv. 1375]","Sea Soldier [Lv. 1425]","Water Fighter [Lv. 1450]"}
-elseif Third_Sea then
-    tableMon = {"Pirate Millionaire [Lv. 1500]","Pistol Billionaire [Lv. 1525]","Dragon Crew Warrior [Lv. 1575]","Dragon Crew Archer [Lv. 1600]","Hydra Enforcer [Lv. 1625]","Venomous Assailant [Lv. 1650]","Marine Commodore [Lv. 1700]","Marine Rear Admiral [Lv. 1725]","Fishman Raider [Lv. 1775]","Fishman Captain [Lv. 1800]","Forest Pirate [Lv. 1825]","Mythological Pirate [Lv. 1850]","Jungle Pirate [Lv. 1900]","Musketeer Pirate [Lv. 1925]","Reborn Skeleton [Lv. 1975]","Living Zombie [Lv. 2000]","Demonic Soul [Lv. 2025]","Posessed Mummy [Lv. 2050]", "Peanut Scout [Lv. 2075]", "Peanut President [Lv. 2100]", "Ice Cream Chef [Lv. 2125]", "Ice Cream Commander [Lv. 2150]", "Cookie Crafter [Lv. 2200]", "Cake Guard [Lv. 2225]", "Baking Staff [Lv. 2250]", "Head Baker [Lv. 2275]", "Cocoa Warrior [Lv. 2300]", "Chocolate Bar Battler [Lv. 2325]", "Sweet Thief [Lv. 2350]", "Candy Rebel [Lv. 2375]", "Candy Pirate [Lv. 2400]", "Snow Demon [Lv. 2425]",
-        "Isle Outlaw [Lv. 2450]", "Island Boy [2475]", "Sun-kissed Warrior [Lv. 2500]", "Isle Champion [Lv. 2525]", "Serpent Hunter [Lv. 2550]", "Skull Slayer [Lv. 2575]"
-    }
-end
+--// Select Monster (All Seas)
+tableMon = {
+    "== Sea 1 (Lv 1-700) ==",
+    "Bandit [Lv. 5]","Monkey [Lv. 14]","Gorilla [Lv. 20]","Pirate [Lv. 35]","Brute [Lv. 45]",
+    "Desert Bandit [Lv. 60]","Desert Officer [Lv. 70]","Snow Bandit [Lv. 90]","Snowman [Lv. 100]",
+    "Chief Petty Officer [Lv. 120]","Sky Bandit [Lv. 150]","Dark Master [Lv. 175]",
+    "Prisoner [Lv. 190]","Dangerous Prisoner [Lv. 210]","Toga Warrior [Lv. 250]",
+    "Gladiator [Lv. 275]","Military Soldier [Lv. 300]","Military Spy [Lv. 325]",
+    "Fishman Warrior [Lv. 375]","Fishman Commando [Lv. 400]","God's Guard [Lv. 450]",
+    "Shanda [Lv. 475]","Royal Squad [Lv. 525]","Royal Soldier [Lv. 550]",
+    "Galley Pirate [Lv. 625]","Galley Captain [Lv. 650]",
+    "== Sea 2 (Lv 700-1500) ==",
+    "Raider [Lv. 700]","Mercenary [Lv. 725]","Swan Pirate [Lv. 775]","Factory Staff [Lv. 800]",
+    "Marine Lieutenant [Lv. 875]","Marine Captain [Lv. 900]","Zombie [Lv. 950]","Vampire [Lv. 975]",
+    "Snow Trooper [Lv. 1000]","Winter Warrior [Lv. 1050]","Lab Subordinate [Lv. 1100]",
+    "Horned Warrior [Lv. 1125]","Magma Ninja [Lv. 1175]","Lava Pirate [Lv. 1200]",
+    "Ship Deckhand [Lv. 1250]","Ship Engineer [Lv. 1275]","Ship Steward [Lv. 1300]",
+    "Ship Officer [Lv. 1325]","Arctic Warrior [Lv. 1350]","Snow Lurker [Lv. 1375]",
+    "Sea Soldier [Lv. 1425]","Water Fighter [Lv. 1450]",
+    "== Sea 3 (Lv 1500-2575) ==",
+    "Pirate Millionaire [Lv. 1500]","Pistol Billionaire [Lv. 1525]","Dragon Crew Warrior [Lv. 1575]",
+    "Dragon Crew Archer [Lv. 1600]","Hydra Enforcer [Lv. 1625]","Venomous Assailant [Lv. 1650]",
+    "Marine Commodore [Lv. 1700]","Marine Rear Admiral [Lv. 1725]","Fishman Raider [Lv. 1775]",
+    "Fishman Captain [Lv. 1800]","Forest Pirate [Lv. 1825]","Mythological Pirate [Lv. 1850]",
+    "Jungle Pirate [Lv. 1900]","Musketeer Pirate [Lv. 1925]","Reborn Skeleton [Lv. 1975]",
+    "Living Zombie [Lv. 2000]","Demonic Soul [Lv. 2025]","Posessed Mummy [Lv. 2050]",
+    "Peanut Scout [Lv. 2075]","Peanut President [Lv. 2100]","Ice Cream Chef [Lv. 2125]",
+    "Ice Cream Commander [Lv. 2150]","Cookie Crafter [Lv. 2200]","Cake Guard [Lv. 2225]",
+    "Baking Staff [Lv. 2250]","Head Baker [Lv. 2275]","Cocoa Warrior [Lv. 2300]",
+    "Chocolate Bar Battler [Lv. 2325]","Sweet Thief [Lv. 2350]","Candy Rebel [Lv. 2375]",
+    "Candy Pirate [Lv. 2400]","Snow Demon [Lv. 2425]","Isle Outlaw [Lv. 2450]",
+    "Island Boy [2475]","Sun-kissed Warrior [Lv. 2500]","Isle Champion [Lv. 2525]",
+    "Serpent Hunter [Lv. 2550]","Skull Slayer [Lv. 2575]"
+}
 
 --// Check Boss Quest
 function CheckBossQuest()
