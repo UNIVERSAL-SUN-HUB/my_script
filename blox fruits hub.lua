@@ -2858,14 +2858,18 @@ end)
 
 local CandiesCheck = Event_Left:addMenu('#Candies Info')
 
-local CandiesRemote = game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer('Candies', 'Check')
+local _ok, CandiesRemote = pcall(function()
+    return game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer('Candies', 'Check')
+end)
+if not _ok then CandiesRemote = nil end
 
-local RefreshCandies = CandiesCheck:addLabel('Your have '.. CandiesRemote ..' candies.')
+local RefreshCandies = CandiesCheck:addLabel('You have '.. tostring(CandiesRemote or "?") ..' candies.')
 
 CandiesCheck:addButton('Refresh Candies Info', function()
-    local CandiesRemote = game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer('Candies', 'Check')
-
-    RefreshCandies:Refresh('Your have '.. CandiesRemote ..' candies.')
+    local _ok2, cr = pcall(function()
+        return game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer('Candies', 'Check')
+    end)
+    RefreshCandies:Refresh('You have '.. tostring((_ok2 and cr) or "?") ..' candies.')
 end)
 
 ----------------------------------------------------//----------------------------------------------------
