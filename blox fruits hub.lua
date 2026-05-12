@@ -2222,7 +2222,7 @@ function CheckLevel()
             Ms = "Sun-kissed Warrior"
             NameQuest = "TikiQuest2"
             QuestLv = 1
-            NameMon = "Sun-"
+            NameMon = "Sun-kissed Warrior"
             CFrameQ = CFrame.new(-16541.0215, 54.770813, 1051.46118, 0.0410757065, -0, -0.999156058, 0, 1, -0, 0.999156058, 0, 0.0410757065)
             CFrameMon = CFrame.new(-16413.5078, 54.6350479, 1054.43555, -0.999391913, 0, -0.034868788, 0, 1, 0, 0.034868788, 0, -0.999391913)
         elseif Lv == 2525 or Lv <= 2549 or _G.SelectMonster == "Isle Champion [Lv. 2525]" then
@@ -2256,7 +2256,7 @@ if First_Sea then
 elseif Second_Sea then
     tableMon = {"Raider [Lv. 700]","Mercenary [Lv. 725]","Swan Pirate [Lv. 775]","Factory Staff [Lv. 800]","Marine Lieutenant [Lv. 875]","Marine Captain [Lv. 900]","Zombie [Lv. 950]","Vampire [Lv. 975]","Snow Trooper [Lv. 1000]","Winter Warrior [Lv. 1050]","Lab Subordinate [Lv. 1100]","Horned Warrior [Lv. 1125]","Magma Ninja [Lv. 1175]","Lava Pirate [Lv. 1200]","Ship Deckhand [Lv. 1250]","Ship Engineer [Lv. 1275]","Ship Steward [Lv. 1300]","Ship Officer [Lv. 1325]","Arctic Warrior [Lv. 1350]","Snow Lurker [Lv. 1375]","Sea Soldier [Lv. 1425]","Water Fighter [Lv. 1450]"}
 elseif Third_Sea then
-    tableMon = {"Pirate Millionaire [Lv. 1500]","Dragon Crew Warrior [Lv. 1575]","Dragon Crew Archer [Lv. 1600]","Hydra Enforcer [Lv. 1625]","Venomous Assailant [Lv. 1650]","Marine Commodore [Lv. 1700]","Marine Rear Admiral [Lv. 1725]","Fishman Raider [Lv. 1775]","Fishman Captain [Lv. 1800]","Forest Pirate [Lv. 1825]","Mythological Pirate [Lv. 1850]","Jungle Pirate [Lv. 1900]","Musketeer Pirate [Lv. 1925]","Reborn Skeleton [Lv. 1975]","Living Zombie [Lv. 2000]","Demonic Soul [Lv. 2025]","Posessed Mummy [Lv. 2050]", "Peanut Scout [Lv. 2075]", "Peanut President [Lv. 2100]", "Ice Cream Chef [Lv. 2125]", "Ice Cream Commander [Lv. 2150]", "Cookie Crafter [Lv. 2200]", "Cake Guard [Lv. 2225]", "Baking Staff [Lv. 2250]", "Head Baker [Lv. 2275]", "Cocoa Warrior [Lv. 2300]", "Chocolate Bar Battler [Lv. 2325]", "Sweet Thief [Lv. 2350]", "Candy Rebel [Lv. 2375]", "Candy Pirate [Lv. 2400]", "Snow Demon [Lv. 2425]",
+    tableMon = {"Pirate Millionaire [Lv. 1500]","Pistol Billionaire [Lv. 1525]","Dragon Crew Warrior [Lv. 1575]","Dragon Crew Archer [Lv. 1600]","Hydra Enforcer [Lv. 1625]","Venomous Assailant [Lv. 1650]","Marine Commodore [Lv. 1700]","Marine Rear Admiral [Lv. 1725]","Fishman Raider [Lv. 1775]","Fishman Captain [Lv. 1800]","Forest Pirate [Lv. 1825]","Mythological Pirate [Lv. 1850]","Jungle Pirate [Lv. 1900]","Musketeer Pirate [Lv. 1925]","Reborn Skeleton [Lv. 1975]","Living Zombie [Lv. 2000]","Demonic Soul [Lv. 2025]","Posessed Mummy [Lv. 2050]", "Peanut Scout [Lv. 2075]", "Peanut President [Lv. 2100]", "Ice Cream Chef [Lv. 2125]", "Ice Cream Commander [Lv. 2150]", "Cookie Crafter [Lv. 2200]", "Cake Guard [Lv. 2225]", "Baking Staff [Lv. 2250]", "Head Baker [Lv. 2275]", "Cocoa Warrior [Lv. 2300]", "Chocolate Bar Battler [Lv. 2325]", "Sweet Thief [Lv. 2350]", "Candy Rebel [Lv. 2375]", "Candy Pirate [Lv. 2400]", "Snow Demon [Lv. 2425]",
         "Isle Outlaw [Lv. 2450]", "Island Boy [2475]", "Sun-kissed Warrior [Lv. 2500]", "Isle Champion [Lv. 2525]", "Serpent Hunter [Lv. 2550]", "Skull Slayer [Lv. 2575]"
     }
 end
@@ -2643,6 +2643,7 @@ function EquipTool(Tool)
 end
 
 --// TWEEN PLAYER
+Speed = 350
 function Tween(P1)
     local Distance = (P1.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
     if Distance > 1 then
@@ -3405,16 +3406,16 @@ local Dojo_Left = Tab.Tab_3_1:addSection()
 local Main_Dojo = Dojo_Left:addMenu('#Dojo Trainer')
 
 function getAcc(BeltName)
-	for i,v in pairs(game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("getInventory")) do
-		if type(v) == "table" then
-			if v.Type == "Wear" then
-				if v.Name == BeltName then
-					return true
-				end
-			end
-		end
-	end
-	return false
+        for i,v in pairs(game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("getInventory")) do
+                if type(v) == "table" then
+                        if v.Type == "Wear" then
+                                if v.Name == BeltName then
+                                        return true
+                                end
+                        end
+                end
+        end
+        return false
 end
 
 local DojoQuestNpc = CFrame.new(5855.19629, 1208.32178, 872.713501, 0.606994748, -1.81058823e-09, -0.794705868, 5.72712722e-09, 1, 2.09605577e-09, 0.794705868, -5.82367621e-09, 0.606994748)
@@ -4481,24 +4482,24 @@ local IslandInfo = Race_V4_Left:addMenu("#Island Status")
 
 local MirageCheck = IslandInfo:addLabel("")
 spawn(function()
-	while task.wait() do
-		if game.Workspace._WorldOrigin.Locations:FindFirstChild("Mirage Island") then
+        while task.wait() do
+                if game.Workspace._WorldOrigin.Locations:FindFirstChild("Mirage Island") then
             MirageCheck:Refresh("Mirage Island : Spawn âœ…")
         else
             MirageCheck:Refresh("Mirage Island : Not Spawn âŒ")
         end
-	end
+        end
 end)
 
 local KitsuneCheck = IslandInfo:addLabel("")
 spawn(function()
-	while task.wait() do
-		if game.Workspace._WorldOrigin.Locations:FindFirstChild("Kitsune Island") then
+        while task.wait() do
+                if game.Workspace._WorldOrigin.Locations:FindFirstChild("Kitsune Island") then
             KitsuneCheck:Refresh("Kitsune Island : Spawn âœ…")
         else
             KitsuneCheck:Refresh("Kitsune Island : Not Spawn âŒ")
         end
-	end
+        end
 end)
 
 local MoonCheck = IslandInfo:addLabel("")
@@ -7441,79 +7442,79 @@ spawn(function()
         if AutoGodhuman then
             pcall(function()
                 if game.Players.LocalPlayer.Character:FindFirstChild("Superhuman") or game.Players.LocalPlayer.Backpack:FindFirstChild("Superhuman") or game:GetService("Players").LocalPlayer.Backpack:FindFirstChild("Black Leg") or game:GetService("Players").LocalPlayer.Character:FindFirstChild("Black Leg") or game:GetService("Players").LocalPlayer.Backpack:FindFirstChild("Death Step") or game:GetService("Players").LocalPlayer.Character:FindFirstChild("Death Step") or game:GetService("Players").LocalPlayer.Backpack:FindFirstChild("Fishman Karate") or game:GetService("Players").LocalPlayer.Character:FindFirstChild("Fishman Karate") or game:GetService("Players").LocalPlayer.Backpack:FindFirstChild("Sharkman Karate") or game:GetService("Players").LocalPlayer.Character:FindFirstChild("Sharkman Karate") or game.Players.LocalPlayer.Backpack:FindFirstChild("Electro") or game.Players.LocalPlayer.Character:FindFirstChild("Electro") or game.Players.LocalPlayer.Backpack:FindFirstChild("Electric Claw") or game.Players.LocalPlayer.Character:FindFirstChild("Electric Claw") or game:GetService("Players").LocalPlayer.Backpack:FindFirstChild("Dragon Claw") or game:GetService("Players").LocalPlayer.Character:FindFirstChild("Dragon Claw") or game:GetService("Players").LocalPlayer.Backpack:FindFirstChild("Dragon Talon") or game:GetService("Players").LocalPlayer.Character:FindFirstChild("Dragon Talon") or game.Players.LocalPlayer.Character:FindFirstChild("Godhuman") or game.Players.LocalPlayer.Backpack:FindFirstChild("Godhuman") then
-					if game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySuperhuman",true) == 1 then
-						if game.Players.LocalPlayer.Backpack:FindFirstChild("Superhuman") and game.Players.LocalPlayer.Backpack:FindFirstChild("Superhuman").Level.Value >= 400 or game.Players.LocalPlayer.Character:FindFirstChild("Superhuman") and game.Players.LocalPlayer.Character:FindFirstChild("Superhuman").Level.Value >= 400 then
-							game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyDeathStep")
-						end
-					else
-						game.StarterGui:SetCore("SendNotification", {
-							Title = "Notification", 
-							Text = "Not Have Superhuman" ,
-							Icon = "http://www.roblox.com/asset/?id=",
-							Duration = 2.5
-						})
-					end
-					if game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyDeathStep",true) == 1 then
-						if game.Players.LocalPlayer.Backpack:FindFirstChild("Death Step") and game.Players.LocalPlayer.Backpack:FindFirstChild("Death Step").Level.Value >= 400 or game.Players.LocalPlayer.Character:FindFirstChild("Death Step") and game.Players.LocalPlayer.Character:FindFirstChild("Death Step").Level.Value >= 400 then
-							game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySharkmanKarate")
-						end
-					else
-						game.StarterGui:SetCore("SendNotification", {
-							Title = "Notification", 
-							Text = "Not Have Death Step" ,
-							Icon = "http://www.roblox.com/asset/?id=",
-							Duration = 2.5
-						})
-					end
-					if game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySharkmanKarate",true) == 1 then
-						if game.Players.LocalPlayer.Backpack:FindFirstChild("Sharkman Karate") and game.Players.LocalPlayer.Backpack:FindFirstChild("Sharkman Karate").Level.Value >= 400 or game.Players.LocalPlayer.Character:FindFirstChild("Sharkman Karate") and game.Players.LocalPlayer.Character:FindFirstChild("Sharkman Karate").Level.Value >= 400 then
-							game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyElectricClaw")
-						end
-					else
-						game.StarterGui:SetCore("SendNotification", {
-							Title = "Notification", 
-							Text = "Not Have SharkMan Karate" ,
-							Icon = "http://www.roblox.com/asset/?id=",
-							Duration = 2.5
-						})
-					end
-					if game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyElectricClaw",true) == 1 then
-						if game.Players.LocalPlayer.Backpack:FindFirstChild("Electric Claw") and game.Players.LocalPlayer.Backpack:FindFirstChild("Electric Claw").Level.Value >= 400 or game.Players.LocalPlayer.Character:FindFirstChild("Electric Claw") and game.Players.LocalPlayer.Character:FindFirstChild("Electric Claw").Level.Value >= 400 then
-							game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyDragonTalon")
-						end
-					else
-						game.StarterGui:SetCore("SendNotification", {
-							Title = "Notification", 
-							Text = "Not Have Electric Claw" ,
-							Icon = "http://www.roblox.com/asset/?id=",
-							Duration = 2.5
-						})
-					end
-					if game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyDragonTalon",true) == 1 then
-						if game.Players.LocalPlayer.Backpack:FindFirstChild("Dragon Talon") and game.Players.LocalPlayer.Backpack:FindFirstChild("Dragon Talon").Level.Value >= 400 or game.Players.LocalPlayer.Character:FindFirstChild("Dragon Talon") and game.Players.LocalPlayer.Character:FindFirstChild("Dragon Talon").Level.Value >= 400 then
-							if string.find(game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyGodhuman",true), "Bring") then
-								game.StarterGui:SetCore("SendNotification", {
-									Title = "Notification", 
-									Text = "Not Have Enough Material" ,
-									Icon = "http://www.roblox.com/asset/?id=",
-									Duration = 2.5
-								})
-							else
-								game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyGodhuman")
-							end
-						end
-					else
-						game.StarterGui:SetCore("SendNotification", {
-							Title = "Notification", 
-							Text = "Not Have Dragon Talon" ,
-							Icon = "http://www.roblox.com/asset/?id=",
-							Duration = 2.5
-						})
-					end
-				else
-					game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySuperhuman")
+                                        if game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySuperhuman",true) == 1 then
+                                                if game.Players.LocalPlayer.Backpack:FindFirstChild("Superhuman") and game.Players.LocalPlayer.Backpack:FindFirstChild("Superhuman").Level.Value >= 400 or game.Players.LocalPlayer.Character:FindFirstChild("Superhuman") and game.Players.LocalPlayer.Character:FindFirstChild("Superhuman").Level.Value >= 400 then
+                                                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyDeathStep")
+                                                end
+                                        else
+                                                game.StarterGui:SetCore("SendNotification", {
+                                                        Title = "Notification", 
+                                                        Text = "Not Have Superhuman" ,
+                                                        Icon = "http://www.roblox.com/asset/?id=",
+                                                        Duration = 2.5
+                                                })
+                                        end
+                                        if game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyDeathStep",true) == 1 then
+                                                if game.Players.LocalPlayer.Backpack:FindFirstChild("Death Step") and game.Players.LocalPlayer.Backpack:FindFirstChild("Death Step").Level.Value >= 400 or game.Players.LocalPlayer.Character:FindFirstChild("Death Step") and game.Players.LocalPlayer.Character:FindFirstChild("Death Step").Level.Value >= 400 then
+                                                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySharkmanKarate")
+                                                end
+                                        else
+                                                game.StarterGui:SetCore("SendNotification", {
+                                                        Title = "Notification", 
+                                                        Text = "Not Have Death Step" ,
+                                                        Icon = "http://www.roblox.com/asset/?id=",
+                                                        Duration = 2.5
+                                                })
+                                        end
+                                        if game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySharkmanKarate",true) == 1 then
+                                                if game.Players.LocalPlayer.Backpack:FindFirstChild("Sharkman Karate") and game.Players.LocalPlayer.Backpack:FindFirstChild("Sharkman Karate").Level.Value >= 400 or game.Players.LocalPlayer.Character:FindFirstChild("Sharkman Karate") and game.Players.LocalPlayer.Character:FindFirstChild("Sharkman Karate").Level.Value >= 400 then
+                                                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyElectricClaw")
+                                                end
+                                        else
+                                                game.StarterGui:SetCore("SendNotification", {
+                                                        Title = "Notification", 
+                                                        Text = "Not Have SharkMan Karate" ,
+                                                        Icon = "http://www.roblox.com/asset/?id=",
+                                                        Duration = 2.5
+                                                })
+                                        end
+                                        if game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyElectricClaw",true) == 1 then
+                                                if game.Players.LocalPlayer.Backpack:FindFirstChild("Electric Claw") and game.Players.LocalPlayer.Backpack:FindFirstChild("Electric Claw").Level.Value >= 400 or game.Players.LocalPlayer.Character:FindFirstChild("Electric Claw") and game.Players.LocalPlayer.Character:FindFirstChild("Electric Claw").Level.Value >= 400 then
+                                                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyDragonTalon")
+                                                end
+                                        else
+                                                game.StarterGui:SetCore("SendNotification", {
+                                                        Title = "Notification", 
+                                                        Text = "Not Have Electric Claw" ,
+                                                        Icon = "http://www.roblox.com/asset/?id=",
+                                                        Duration = 2.5
+                                                })
+                                        end
+                                        if game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyDragonTalon",true) == 1 then
+                                                if game.Players.LocalPlayer.Backpack:FindFirstChild("Dragon Talon") and game.Players.LocalPlayer.Backpack:FindFirstChild("Dragon Talon").Level.Value >= 400 or game.Players.LocalPlayer.Character:FindFirstChild("Dragon Talon") and game.Players.LocalPlayer.Character:FindFirstChild("Dragon Talon").Level.Value >= 400 then
+                                                        if string.find(game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyGodhuman",true), "Bring") then
+                                                                game.StarterGui:SetCore("SendNotification", {
+                                                                        Title = "Notification", 
+                                                                        Text = "Not Have Enough Material" ,
+                                                                        Icon = "http://www.roblox.com/asset/?id=",
+                                                                        Duration = 2.5
+                                                                })
+                                                        else
+                                                                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyGodhuman")
+                                                        end
+                                                end
+                                        else
+                                                game.StarterGui:SetCore("SendNotification", {
+                                                        Title = "Notification", 
+                                                        Text = "Not Have Dragon Talon" ,
+                                                        Icon = "http://www.roblox.com/asset/?id=",
+                                                        Duration = 2.5
+                                                })
+                                        end
+                                else
+                                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySuperhuman")
 
-				end
+                                end
             end)
         end
     end
@@ -9251,7 +9252,7 @@ spawn(function()
                             TextLabel.BackgroundTransparency = 1.000
                             TextLabel.Size = UDim2.new(0, 200, 0, 50)
                             TextLabel.Font = Enum.Font.GothamBold
-						    TextLabel.FontSize = "Size14"
+                                                    TextLabel.FontSize = "Size14"
                             TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
                             TextLabel.Text.Size = 35
                             TextLabel.TextStrokeTransparency = 0.5
@@ -9300,32 +9301,32 @@ local Main_Pvp = Pvp_Right:addMenu("#Combat Player")
 
 local PlayerList = {}
 for i,v in pairs(game:GetService('Workspace').Characters:GetChildren()) do  
-	if v.Name ~= game.Players.LocalPlayer.Name then
-		table.insert(PlayerList, v.Name)
-	end
+        if v.Name ~= game.Players.LocalPlayer.Name then
+                table.insert(PlayerList, v.Name)
+        end
 end
 local DropdownPlayer = Main_Pvp:addDropdown("Select Player", SelectedPlayer, PlayerList, function(Value)
     SelectedPlayer = Value
 end)
 Main_Pvp:addButton("Refresh Player",function()
-	NewPlayerList = {}
-	for i,v in pairs(game:GetService('Workspace').Characters:GetChildren()) do  
+        NewPlayerList = {}
+        for i,v in pairs(game:GetService('Workspace').Characters:GetChildren()) do  
         if v.Name ~= game.Players.LocalPlayer.Name then
             table.insert(NewPlayerList, v.Name)
         end
     end
-	DropdownPlayer:Clear()
-	DropdownPlayer:Refresh(NewPlayerList)
+        DropdownPlayer:Clear()
+        DropdownPlayer:Refresh(NewPlayerList)
 end)
 
 Main_Pvp:addToggle("Spectate Player", Spectate, function(value)
-	Spectate = value
-	local plr1 = game.Players.LocalPlayer.Character.Humanoid
-	local plr2 = game:GetService('Workspace').Characters:FindFirstChild(SelectedPlayer)
-	repeat task.wait()
-		game.Workspace.Camera.CameraSubject = plr2.Humanoid
-	until Spectate == false 
-	game.Workspace.Camera.CameraSubject = plr1
+        Spectate = value
+        local plr1 = game.Players.LocalPlayer.Character.Humanoid
+        local plr2 = game:GetService('Workspace').Characters:FindFirstChild(SelectedPlayer)
+        repeat task.wait()
+                game.Workspace.Camera.CameraSubject = plr2.Humanoid
+        until Spectate == false 
+        game.Workspace.Camera.CameraSubject = plr1
 end)
 
 Main_Pvp:addToggle("Combat Player", TweenToPlayer, function(Value)
@@ -10386,7 +10387,7 @@ spawn(function()
                     if v:IsA("Tool") then
                         v.Handle.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
                     end
-                end	
+                end     
             end)
         end
     end
