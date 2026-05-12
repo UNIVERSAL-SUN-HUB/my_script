@@ -1572,6 +1572,7 @@ end)
 --// PATH 
 --[[wait(1)
 -- external script removed
+]]
 
 if game:GetService("Players").LocalPlayer.PlayerGui.Main:FindFirstChild("ChooseTeam") then
     repeat wait()
