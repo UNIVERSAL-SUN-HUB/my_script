@@ -711,9 +711,11 @@ makeButton(pageCombat, "Kill All Near Me", "Rapidly M1-spams all NPCs in aura ra
     task.spawn(function()
         for i = 1, 30 do
             pcall(function()
-                for _, v in ipairs(workspace:GetDescendants()) do
-                    if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 then
-                        local rp = v.Parent:FindFirstChild("HumanoidRootPart")
+                if not AltNPCs then return end
+                for _, model in ipairs(AltNPCs:GetChildren()) do
+                    local hum = model:FindFirstChild("h")
+                    if hum and hum:IsA("Humanoid") and hum.Health > 0 then
+                        local rp = model:FindFirstChild("HumanoidRootPart")
                         if rp and (rp.Position - rootPart.Position).Magnitude <= State.killAuraRange then
                             rootPart.CFrame = rp.CFrame * CFrame.new(0, 2.5, 0)
                             fireM1(rp)
@@ -726,15 +728,16 @@ makeButton(pageCombat, "Kill All Near Me", "Rapidly M1-spams all NPCs in aura ra
     end)
 end)
 
-makeButton(pageCombat, "Teleport to Nearest Boss", "TP directly to the nearest boss enemy", 6, function()
-    toast("Teleporting to boss...")
+makeButton(pageCombat, "Teleport to Nearest Enemy", "TP directly to the nearest enemy in AltNPCs", 6, function()
+    toast("Teleporting to nearest enemy...")
     pcall(function()
         local closest, dist = nil, math.huge
-        for _, v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 then
-                local rp = v.Parent:FindFirstChild("HumanoidRootPart")
-                local maxHp = v.MaxHealth
-                if rp and maxHp > 5000 then
+        if not AltNPCs then toast("AltNPCs not found!") return end
+        for _, model in ipairs(AltNPCs:GetChildren()) do
+            local hum = model:FindFirstChild("h")
+            if hum and hum:IsA("Humanoid") and hum.Health > 0 then
+                local rp = model:FindFirstChild("HumanoidRootPart")
+                if rp then
                     local d = (rp.Position - rootPart.Position).Magnitude
                     if d < dist then dist = d; closest = rp end
                 end
@@ -743,7 +746,7 @@ makeButton(pageCombat, "Teleport to Nearest Boss", "TP directly to the nearest b
         if closest then
             rootPart.CFrame = closest.CFrame + Vector3.new(0, 5, 0)
         else
-            toast("No boss found nearby!")
+            toast("No enemies found!")
         end
     end)
 end)
@@ -793,6 +796,44 @@ makeButton(pagePlayer, "Rejoin Server", "Leaves and rejoins the same game", 7, f
     end)
 end)
 
+makeDivider(pagePlayer, "InfoESP Locations", 8)
+
+-- Helper: teleport to a named marker inside Workspace.InfoESP
+local InfoESP = workspace:FindFirstChild("InfoESP")
+local function tpToESP(markerName)
+    pcall(function()
+        if not InfoESP then toast("InfoESP not found!") return end
+        local marker = InfoESP:FindFirstChild(markerName)
+        if not marker then toast(markerName .. " marker not found!") return end
+        -- Get the position of the marker part (or its first BasePart child)
+        local part = marker:IsA("BasePart") and marker
+                  or marker:FindFirstChildWhichIsA("BasePart")
+        if part then
+            rootPart.CFrame = CFrame.new(part.Position + Vector3.new(0, 5, 0))
+            toast("Teleported to " .. markerName)
+        else
+            toast("No part in " .. markerName)
+        end
+    end)
+end
+
+makeButton(pagePlayer, "→ Ability Reroll NPC",  "Teleport to the Ability Reroll NPC",  9,  function() tpToESP("AbilityReroll")  end)
+makeButton(pagePlayer, "→ Trait Reroll NPC",    "Teleport to the Trait Reroll NPC",    10, function() tpToESP("TraitReroll")    end)
+makeButton(pagePlayer, "→ Fist Reroll NPC",     "Teleport to the Fist Reroll NPC",     11, function() tpToESP("FistReroll")     end)
+makeButton(pagePlayer, "→ Ticket Reroll NPC",   "Teleport to the Ticket Reroll NPC",   12, function() tpToESP("TicketReroll")   end)
+makeButton(pagePlayer, "→ Spin Wheel",          "Teleport to the Reward Wheel",        13, function() tpToESP("Wheel")          end)
+makeButton(pagePlayer, "→ Aura Shop",           "Teleport to the Aura Shop",           14, function() tpToESP("Auras")          end)
+makeButton(pagePlayer, "→ Barber",              "Teleport to the Barber",              15, function() tpToESP("Barber")         end)
+makeButton(pagePlayer, "→ Cosmetics",           "Teleport to the Cosmetics shop",      16, function() tpToESP("Cosmetics")      end)
+makeButton(pagePlayer, "→ Fitness",             "Teleport to the Fitness area",        17, function() tpToESP("Fitness")        end)
+makeButton(pagePlayer, "→ AFK World",           "Teleport to the AFK World portal",    18, function() tpToESP("AfkWorld")       end)
+
+makeDivider(pagePlayer, "Quest NPCs", 19)
+for i = 1, 10 do
+    makeButton(pagePlayer, "→ Quest " .. i .. " NPC", "Teleport to Quest " .. i .. " NPC", 19 + i,
+        function() tpToESP("Quest" .. i) end)
+end
+
 -- ─────────────────────────────────────────────────
 --  Shared target references
 -- ─────────────────────────────────────────────────
@@ -801,32 +842,16 @@ local auraTarget = nil
 local Camera     = workspace.CurrentCamera
 
 -- ─────────────────────────────────────────────────
---  Shop / peaceful NPC filter
---  Returns true if the model should be SKIPPED
---  (vendors, quest givers, spawn NPCs, etc.)
+--  Enemy NPC filter
+--  All combat enemies live in Workspace.AltNPCs.
+--  Any model NOT in that folder is skipped.
 -- ─────────────────────────────────────────────────
-local SKIP_KEYWORDS = {
-    "shop","vendor","merchant","trader","seller","npc",
-    "quest","spawn","dummy","mannequin","tutorial","guide",
-    "blacksmith","bank","heal","doctor","inn","keeper","master"
-}
-local function isShopNPC(model)
-    if not model then return true end
-    -- Has a ProximityPrompt = interactable / shop NPC
-    if model:FindFirstChildWhichIsA("ProximityPrompt", true) then return true end
-    -- Check model name and its parent folder name
-    local name = model.Name:lower()
-    local parentName = (model.Parent and model.Parent.Name or ""):lower()
-    for _, kw in ipairs(SKIP_KEYWORDS) do
-        if name:find(kw) or parentName:find(kw) then return true end
-    end
-    -- If the NPC is inside a folder literally called "NPCs" or "Characters"
-    -- but NOT "Enemies" / "Mobs" — skip it
-    if model.Parent and model.Parent:IsA("Folder") then
-        local fn = model.Parent.Name:lower()
-        if fn:find("npc") or fn:find("vendor") or fn:find("shop") then return true end
-    end
-    return false
+local AltNPCs = workspace:WaitForChild("AltNPCs", 10)
+
+local function isEnemy(model)
+    if not model then return false end
+    -- Only attack models that are direct children of AltNPCs
+    return model.Parent == AltNPCs
 end
 
 -- ─────────────────────────────────────────────────
@@ -884,7 +909,7 @@ local function lockdownNPC(npcRoot)
             if s:IsA("Script") then s.Disabled = true end
         end
         -- Zero walkspeed + jump so it physically can't move to attack
-        local hum = model:FindFirstChildOfClass("Humanoid")
+        local hum = model:FindFirstChild("h") or model:FindFirstChildOfClass("Humanoid")
         if hum then
             hum.WalkSpeed  = 0
             hum.JumpHeight = 0
@@ -894,20 +919,23 @@ local function lockdownNPC(npcRoot)
 end
 
 -- ─────────────────────────────────────────────────
---  Find nearest ENEMY NPC / Boss (shop NPCs skipped)
+--  Find nearest ENEMY NPC / Boss
+--  Only scans Workspace.AltNPCs — the confirmed
+--  enemy folder found via Dex 2.0 exploration.
+--  NPC humanoids are named "h" in this game.
 -- ─────────────────────────────────────────────────
 local function getNearestNPC(bossOnly)
     local best, bestDist = nil, math.huge
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 then
-            if not isShopNPC(v.Parent) then
-                local rp = v.Parent:FindFirstChild("HumanoidRootPart")
-                if rp then
-                    local hpOk = bossOnly and (v.MaxHealth > 5000) or true
-                    if hpOk then
-                        local d = (rp.Position - rootPart.Position).Magnitude
-                        if d < bestDist then bestDist = d; best = rp end
-                    end
+    if not AltNPCs then return nil end
+    for _, model in ipairs(AltNPCs:GetChildren()) do
+        local hum = model:FindFirstChild("h")
+        if hum and hum:IsA("Humanoid") and hum.Health > 0 then
+            local rp = model:FindFirstChild("HumanoidRootPart")
+            if rp then
+                local hpOk = bossOnly and (hum.MaxHealth > 5000) or true
+                if hpOk then
+                    local d = (rp.Position - rootPart.Position).Magnitude
+                    if d < bestDist then bestDist = d; best = rp end
                 end
             end
         end
@@ -963,23 +991,25 @@ RunService.Heartbeat:Connect(function()
     end
 
     -- Lock farm NPC in place right in front of player
-    if State.autoFarm and farmTarget and farmTarget.Parent
-    and farmTarget.Parent:FindFirstChildOfClass("Humanoid")
-    and farmTarget.Parent:FindFirstChildOfClass("Humanoid").Health > 0 then
-        dragNPCToPlayer(farmTarget)
-        pcall(function()
-            rootPart.CFrame = CFrame.lookAt(rootPart.Position, farmTarget.Position)
-        end)
+    if State.autoFarm and farmTarget and farmTarget.Parent then
+        local _fh = farmTarget.Parent:FindFirstChild("h") or farmTarget.Parent:FindFirstChildOfClass("Humanoid")
+        if _fh and _fh.Health > 0 then
+            dragNPCToPlayer(farmTarget)
+            pcall(function()
+                rootPart.CFrame = CFrame.lookAt(rootPart.Position, farmTarget.Position)
+            end)
+        end
     end
 
     -- Lock boss NPC in place
-    if State.autoBoss and auraTarget and auraTarget.Parent
-    and auraTarget.Parent:FindFirstChildOfClass("Humanoid")
-    and auraTarget.Parent:FindFirstChildOfClass("Humanoid").Health > 0 then
-        dragNPCToPlayer(auraTarget)
-        pcall(function()
-            rootPart.CFrame = CFrame.lookAt(rootPart.Position, auraTarget.Position)
-        end)
+    if State.autoBoss and auraTarget and auraTarget.Parent then
+        local _ah = auraTarget.Parent:FindFirstChild("h") or auraTarget.Parent:FindFirstChildOfClass("Humanoid")
+        if _ah and _ah.Health > 0 then
+            dragNPCToPlayer(auraTarget)
+            pcall(function()
+                rootPart.CFrame = CFrame.lookAt(rootPart.Position, auraTarget.Position)
+            end)
+        end
     end
 end)
 
@@ -996,7 +1026,7 @@ task.spawn(function()
             pcall(function()
                 local hum = farmTarget
                     and farmTarget.Parent
-                    and farmTarget.Parent:FindFirstChildOfClass("Humanoid")
+                    and (farmTarget.Parent:FindFirstChild("h") or farmTarget.Parent:FindFirstChildOfClass("Humanoid"))
                 -- Only switch to a new NPC when current one is fully dead
                 if not hum or hum.Health <= 0 then
                     disabledNPCs[farmTarget] = nil  -- clear lockdown for old target
@@ -1017,11 +1047,12 @@ task.spawn(function()
         -- ── KILL AURA ──────────────────────────────
         if State.killAura then
             pcall(function()
+                if not AltNPCs then return end
                 local best, bestDist = nil, math.huge
-                for _, v in ipairs(workspace:GetDescendants()) do
-                    if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0
-                    and not isShopNPC(v.Parent) then
-                        local rp = v.Parent:FindFirstChild("HumanoidRootPart")
+                for _, model in ipairs(AltNPCs:GetChildren()) do
+                    local hum = model:FindFirstChild("h")
+                    if hum and hum:IsA("Humanoid") and hum.Health > 0 then
+                        local rp = model:FindFirstChild("HumanoidRootPart")
                         if rp then
                             local d = (rp.Position - rootPart.Position).Magnitude
                             if d <= State.killAuraRange and d < bestDist then
@@ -1046,12 +1077,13 @@ task.spawn(function()
         -- Player still lands the killing blow so rewards drop.
         if State.weakenNPCs then
             pcall(function()
-                for _, v in ipairs(workspace:GetDescendants()) do
-                    if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 1
-                    and not isShopNPC(v.Parent) then
-                        local rp = v.Parent:FindFirstChild("HumanoidRootPart")
+                if not AltNPCs then return end
+                for _, model in ipairs(AltNPCs:GetChildren()) do
+                    local hum = model:FindFirstChild("h")
+                    if hum and hum:IsA("Humanoid") and hum.Health > 1 then
+                        local rp = model:FindFirstChild("HumanoidRootPart")
                         if rp and (rp.Position - rootPart.Position).Magnitude <= 20 then
-                            v.Health = 1
+                            hum.Health = 1
                         end
                     end
                 end
@@ -1063,7 +1095,7 @@ task.spawn(function()
             pcall(function()
                 local hum = auraTarget
                     and auraTarget.Parent
-                    and auraTarget.Parent:FindFirstChildOfClass("Humanoid")
+                    and (auraTarget.Parent:FindFirstChild("h") or auraTarget.Parent:FindFirstChildOfClass("Humanoid"))
                 -- Only switch boss when current one is dead
                 if not hum or hum.Health <= 0 then
                     disabledNPCs[auraTarget] = nil

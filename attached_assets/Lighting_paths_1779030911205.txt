@@ -1,0 +1,8 @@
+--- Lighting PATHS ---
+Lighting.Atmosphere
+Lighting.Sunny1
+Lighting.Bloom2
+Lighting.ColorCorrection
+Lighting.Realistic Bloom
+Lighting.Realistic ColorCorrection
+Lighting.SunRays

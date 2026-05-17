@@ -1,0 +1,3 @@
+--- StarterPack PATHS ---
+StarterPack.LocalScript
+StarterPack.ClothingOLD
