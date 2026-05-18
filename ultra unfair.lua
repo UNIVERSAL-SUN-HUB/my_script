@@ -10,6 +10,14 @@ local TweenService   = game:GetService("TweenService")
 local HttpService    = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- ─────────────────────────────────────────────────
+--  Confirmed remotes from Remote Spy
+-- ─────────────────────────────────────────────────
+local RemotePunch     = ReplicatedStorage:WaitForChild("Punch",     5)
+local RemoteKnockback = ReplicatedStorage:WaitForChild("Knockback", 5)
+local RemotePlayFx    = ReplicatedStorage:WaitForChild("PlayFx",    5)
+local RemoteDamage    = ReplicatedStorage:WaitForChild("Damage",    5)
+
 local player   = Players.LocalPlayer
 local char     = player.Character or player.CharacterAdded:Wait()
 local humanoid = char:WaitForChild("Humanoid")
@@ -589,6 +597,77 @@ end
 -- ─────────────────────────────────────────────────
 --  ══ FARM TAB ══
 -- ─────────────────────────────────────────────────
+
+-- Live Stats panel — reads confirmed player data values from Dex
+do
+    local statsPanel = Instance.new("Frame")
+    statsPanel.Size             = UDim2.new(1, 0, 0, 62)
+    statsPanel.BackgroundColor3 = C.panel
+    statsPanel.BorderSizePixel  = 0
+    statsPanel.LayoutOrder      = 0
+    statsPanel.Parent           = pageFarm
+    corner(statsPanel, 8)
+    stroke(statsPanel, C.divider, 1)
+    padding(statsPanel, 8)
+
+    local statsLayout = Instance.new("UIListLayout", statsPanel)
+    statsLayout.FillDirection = Enum.FillDirection.Horizontal
+    statsLayout.SortOrder     = Enum.SortOrder.LayoutOrder
+    statsLayout.Padding       = UDim.new(0, 6)
+
+    local function statCell(label, order)
+        local cell = Instance.new("Frame")
+        cell.Size             = UDim2.new(0, 100, 1, 0)
+        cell.BackgroundColor3 = C.bg
+        cell.BorderSizePixel  = 0
+        cell.LayoutOrder      = order
+        cell.Parent           = statsPanel
+        corner(cell, 6)
+
+        local top = Instance.new("TextLabel")
+        top.Size              = UDim2.new(1, 0, 0.5, 0)
+        top.BackgroundTransparency = 1
+        top.Text              = label
+        top.TextColor3        = C.subtext
+        top.Font              = Enum.Font.Gotham
+        top.TextSize          = 10
+        top.Parent            = cell
+
+        local val = Instance.new("TextLabel")
+        val.Size              = UDim2.new(1, 0, 0.5, 0)
+        val.Position          = UDim2.new(0, 0, 0.5, 0)
+        val.BackgroundTransparency = 1
+        val.Text              = "..."
+        val.TextColor3        = C.accent
+        val.Font              = Enum.Font.GothamBold
+        val.TextSize          = 13
+        val.Parent            = cell
+
+        return val
+    end
+
+    local lvlVal    = statCell("Level",       1)
+    local spinsVal  = statCell("WheelSpins",  2)
+    local auraVal   = statCell("RemainingAura", 3)
+    local focusVal  = statCell("Focus",       4)
+
+    -- Refresh every second from confirmed DataLoaded values
+    task.spawn(function()
+        while task.wait(1) do
+            pcall(function()
+                local dl = player:FindFirstChild("DataLoaded")
+                    or player:FindFirstChild("leaderstats")
+                local ls = player:FindFirstChild("leaderstats")
+
+                lvlVal.Text   = ls and ls:FindFirstChild("Level")          and tostring(ls.Level.Value)         or "?"
+                spinsVal.Text = dl and dl:FindFirstChild("WheelSpins")     and tostring(dl.WheelSpins.Value)    or "?"
+                auraVal.Text  = dl and dl:FindFirstChild("RemainingAura")  and tostring(dl.RemainingAura.Value) or "?"
+                focusVal.Text = dl and dl:FindFirstChild("Focus")          and tostring(dl.Focus.Value)         or "?"
+            end)
+        end
+    end)
+end
+
 makeDivider(pageFarm, "Auto Farm", 1)
 
 local setAutoFarmToggle = makeToggle(pageFarm, "Auto Farm", "Toggle with L key — TP enemy NPC to you & attack", 2, function(v)
@@ -718,7 +797,7 @@ makeButton(pageCombat, "Kill All Near Me", "Rapidly M1-spams all NPCs in aura ra
                         local rp = model:FindFirstChild("HumanoidRootPart")
                         if rp and (rp.Position - rootPart.Position).Magnitude <= State.killAuraRange then
                             rootPart.CFrame = rp.CFrame * CFrame.new(0, 2.5, 0)
-                            fireM1(rp)
+                            attackNPC(rp)
                         end
                     end
                 end
@@ -835,11 +914,15 @@ for i = 1, 10 do
 end
 
 -- ─────────────────────────────────────────────────
---  Shared target references
+--  Shared target references + forward declarations
+--  (attackNPC is assigned later after pressE/remotes
+--   are ready, but declared here so button closures
+--   above can capture it as an upvalue)
 -- ─────────────────────────────────────────────────
 local farmTarget = nil
 local auraTarget = nil
 local Camera     = workspace.CurrentCamera
+local attackNPC  -- forward-declared; assigned below after helper functions
 
 -- ─────────────────────────────────────────────────
 --  Enemy NPC filter
@@ -869,28 +952,53 @@ local function dragNPCToPlayer(npcRoot)
 end
 
 -- ─────────────────────────────────────────────────
---  Press E — tries VirtualInputManager first (most
---  reliable in Roblox), then executor keypress fallback
+--  attackNPC(npcRoot)
+--  Uses the confirmed Remote Spy remotes:
+--    • ReplicatedStorage.Punch      (Humanoid, 2, 94, nil, "DamageMultiplier: 1")
+--    • ReplicatedStorage.Knockback  (Model, 2)
+--  Falls back to VirtualInputManager / keypress if
+--  remotes are unavailable.
 -- ─────────────────────────────────────────────────
-local VIM = pcall(function() return game:GetService("VirtualInputManager") end) and game:GetService("VirtualInputManager") or nil
+local VIM = pcall(function() return game:GetService("VirtualInputManager") end)
+         and game:GetService("VirtualInputManager") or nil
 
 local function pressE()
-    -- Method 1: VirtualInputManager (Roblox-native, no executor needed)
     pcall(function()
         if VIM then
             VIM:SendKeyEvent(true,  Enum.KeyCode.E, false, game)
-            task.wait(0.08)
+            task.wait(0.06)
             VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
         end
     end)
-    -- Method 2: executor keypress fallback
     pcall(function()
-        if keypress then
-            keypress(0x45)
-            task.wait(0.08)
-            keyrelease(0x45)
+        if keypress then keypress(0x45) task.wait(0.06) keyrelease(0x45) end
+    end)
+end
+
+-- Assign to the forward-declared upvalue (no `local` here)
+attackNPC = function(npcRoot)
+    if not npcRoot or not npcRoot.Parent then return end
+    local model = npcRoot.Parent
+    local hum   = model:FindFirstChild("h") or model:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+
+    -- Primary: fire Punch remote (confirmed via Remote Spy)
+    -- Args: Humanoid, 2, 94, nil, "DamageMultiplier: 1"
+    pcall(function()
+        if RemotePunch then
+            RemotePunch:FireServer(hum, 2, 94, nil, "DamageMultiplier: 1")
         end
     end)
+
+    -- Secondary: fire Knockback remote (confirmed via Remote Spy)
+    pcall(function()
+        if RemoteKnockback then
+            RemoteKnockback:FireServer(model, 2)
+        end
+    end)
+
+    -- Fallback: press E (in case server validates position before remote)
+    pressE()
 end
 
 -- ─────────────────────────────────────────────────
@@ -1037,7 +1145,7 @@ task.spawn(function()
                 end
                 if farmTarget then
                     dragNPCToPlayer(farmTarget)
-                    pressE()
+                    attackNPC(farmTarget)
                 end
             end)
         else
@@ -1067,7 +1175,7 @@ task.spawn(function()
                     pcall(function()
                         rootPart.CFrame = CFrame.lookAt(rootPart.Position, best.Position)
                     end)
-                    pressE()
+                    attackNPC(best)
                 end
             end)
         end
@@ -1104,7 +1212,7 @@ task.spawn(function()
                 end
                 if auraTarget then
                     dragNPCToPlayer(auraTarget)
-                    pressE()
+                    attackNPC(auraTarget)
                 end
             end)
         else
