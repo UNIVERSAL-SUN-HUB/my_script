@@ -28,7 +28,7 @@ local Tabs = {
 -- Updates Section
 Tabs.Updates:AddParagraph({
     Title = "Version 3.2 (Extras & Fixes)",
-    Content = "- Extras Tab: Added WalkSpeed/JumpPower modifiers, Infinite Jump, Noclip, Fly Mode, ESP (Players/NPCs), and customizable Attack Cooldown.\n- Quest NPC Coordinates Fixed: Fully resolved the standby/flight bugs near Walt, KingXerviux, Caped Baldy, and Sigma.\n- Universal Telemetry Patched: Optimized background webhook delivery with lowercase/uppercase executor compatibility."
+    Content = "- Extras Tab: Added WalkSpeed/JumpPower modifiers, Infinite Jump, Noclip, Fly Mode, ESP (Players/NPCs), and customizable Attack Cooldown.\n- Quest NPC Coordinates Fixed: Fully resolved the standby/flight bugs near Walt, KingXerviux, Caped Baldy, and Sigma.\n- Universal Telemetry Patched:."
 })
 
 Tabs.Updates:AddParagraph({
