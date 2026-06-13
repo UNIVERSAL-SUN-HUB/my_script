@@ -4,7 +4,7 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 
 local Window = Fluent:CreateWindow({
     Title = "Ultra Unfair - Ultimate Script",
-    SubTitle = "v3.4 | by DORACAKE (DORAEMON)",
+    SubTitle = "v3.7 | by DORACAKE (DORAEMON)",
     TabWidth = 160,
     Size = UDim2.fromOffset(600, 480),
     Acrylic = true,
@@ -26,6 +26,16 @@ local Tabs = {
 }
 
 -- Updates Section
+Tabs.Updates:AddParagraph({
+    Title = "Version 3.6 (Layout & Stability Overhaul)",
+    Content = "- Move Smart Stats: Relocated Stat Allocation Profile & Custom Weights to the Stats tab.\n- Move Boss Farming: Relocated Boss Farm controls to the Main tab next to Auto Farm.\n- Move Exploits: Relocated Anti-Ragdoll & Anti-Stun to the Combat tab.\n- Custom Webhook: Added option in Settings to input custom Webhook URL with a Send Test Webhook button.\n- Lag Reducer: Added Lag Reducer (FPS Boost) toggle in Settings to turn off 3D rendering and shadows for overnight farming.\n- Auto Upgrade Auras: Added Auto Upgrade Auras toggle in Rerolls tab.\n- Bug Fixes: Removed redundant Auto Roll tickets toggle/loop, removed dead training loop, and added safe checks to prevent script errors from missing GUI/stats values."
+})
+
+Tabs.Updates:AddParagraph({
+    Title = "Version 3.5 (Tester Feedback Fixes)",
+    Content = "- Loading Screen Fix: Added isGameFullyLoaded checks across all loops to prevent loading screen loop/freeze glitch.\n- Boss Detection Fix: Re-targeted boss farm to intercept ShowBoss client events and check PlayerGui.Boss.Enabled, strictly ignoring standard elite NPCs.\n- Training Loop Cleanup: Removed broken global auto-train loops, relying on statpointguy (Roberto) and level gains.\n- Ticket System Alignment: Corrected reroll ticket dropdown values and added detection for the purple ticket (???) from bosses with Discord webhook logging.\n- Ability Index Alignment: Aligned ability reroll target list with all 82 official abilities and 14 traits from game files."
+})
+
 Tabs.Updates:AddParagraph({
     Title = "Version 3.4 (Reroll & Stats Fixes)",
     Content = "- Auto-Stats Fix: Implemented batch upgrading with temporary teleport to statpointguy, checking cost and limit caps dynamically.\n- Gear Roll & Upgrade Fixes: Added automatic proximity teleports to Face Puncher, Strato, and John NPCs during rolls/upgrades to bypass server checks.\n- Rubber-banding Fixes: Paused movement and combat loops when rerolling, upgrading, training, or traveling to prevent player conflicts.\n- NPC Swap Fix: Corrected dealer (Amplifier) and John (Aura) coordinates."
@@ -84,6 +94,8 @@ local Remotes = {
     Amplify = ReplicatedStorage:WaitForChild("Amplify")
 }
 
+local WebhookURL = "https://discord.com/api/webhooks/1514952796510748795/pPLiR-cWEpH8gtSl5PkO0JRly9-1-QMpALrIZlaiNlLgUqFTyj9tOZ8LylYilNUH9CL5"
+
 -- State
 local Toggles = {
     AutoFarm = false,
@@ -96,7 +108,6 @@ local Toggles = {
     NPC_Drag = false,
     AutoSpin = false,
     AutoAchieve = false,
-    AutoRoll = false,
     AutoPotential = false,
     AutoReroll = false,
     AutoTraitReroll = false,
@@ -105,6 +116,8 @@ local Toggles = {
     AutoRollRelic = false,
     AutoUpgradeRelic = false,
     AutoRollAura = false,
+    AutoUpgradeAura = false,
+    LagReducer = false,
     MasterFarm = false,
     MasterLevelFarm = false,
     SpeedHack = false,
@@ -116,8 +129,6 @@ local Toggles = {
     Fly = false,
     AntiAdmin = false,
     PlayerDetector = false,
-    AutoTrainEndurance = false,
-    AutoTrainChainPrison = false,
     AntiRagdoll = false,
     AntiStun = false,
     AutoEquipBest = false,
@@ -146,6 +157,12 @@ local CONFIG = {
     FlySpeed = 1,
     TargetPotential = 0
 }
+
+-- Safe Global/State Variables (Pre-declared to prevent scope shadowing)
+local doingQuest = false
+local playerDetectorPaused = false
+local currentTarget = nil
+local GameInfo = nil
 
 -- Quest Mapping (Updated with exact positions from CFrame Logs)
 local QuestData = {
@@ -275,6 +292,41 @@ local function formatNumber(n)
     return tostring(n)
 end
 
+local function isGameFullyLoaded()
+    if not game:IsLoaded() then return false end
+    if not localPlayer:FindFirstChild("DataLoaded") or not localPlayer.DataLoaded.Value then return false end
+    if not localPlayer:FindFirstChild("FullyLoaded") or not localPlayer.FullyLoaded.Value then return false end
+    local char = localPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChild("Humanoid") then return false end
+    return true
+end
+
+local function sendWebhookAlert(title, message, color)
+    local requestFn = (syn and syn.request) or (http and http.request) or request or http_request
+    if not requestFn then return end
+    
+    local url = WebhookURL
+    local payload = {
+        embeds = {
+            {
+                title = title,
+                description = message,
+                color = color or 10181046, -- Purple
+                timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+            }
+        }
+    }
+    
+    pcall(function()
+        requestFn({
+            Url = url,
+            Method = "POST",
+            Headers = { ["Content-Type"] = "application/json" },
+            Body = HttpService:JSONEncode(payload)
+        })
+    end)
+end
+
 local function serverHop()
     local HttpService = game:GetService("HttpService")
     local TeleportService = game:GetService("TeleportService")
@@ -325,18 +377,22 @@ end
 
 local function isQuestCompleted()
     local quest = getQuestData()
-    if not quest then return false end
+    if not quest or type(quest) ~= "table" then return false end
     
     local questName = quest.Name
-    local success, Info = pcall(function()
-        return require(ReplicatedStorage:WaitForChild("Info"))
-    end)
+    if not questName or questName == "None" or questName == "" then return false end
     
-    if success and Info and Info.Quests and Info.Quests[questName] then
-        local questInfo = Info.Quests[questName]
+    if not GameInfo then
+        pcall(function()
+            GameInfo = require(ReplicatedStorage:WaitForChild("Info", 5))
+        end)
+    end
+    
+    if GameInfo and GameInfo.Quests and GameInfo.Quests[questName] then
+        local questInfo = GameInfo.Quests[questName]
         local allCompleted = true
         local hasObjectives = false
-        if quest.Objectives then
+        if quest.Objectives and questInfo.Objectives then
             for objName, reqCount in pairs(questInfo.Objectives) do
                 hasObjectives = true
                 local currentCount = quest.Objectives[objName] or 0
@@ -356,8 +412,11 @@ local function isQuestCompleted()
         if mainGui then
             local questFrame = mainGui:FindFirstChild("Quest")
             if questFrame and questFrame.Visible then
-                local text = questFrame.name.Text:lower()
-                if text:find("completed") or text:find("return") then return true end
+                local nameLabel = questFrame:FindFirstChild("name") or questFrame:FindFirstChild("Name")
+                if nameLabel then
+                    local text = nameLabel.Text:lower()
+                    if text:find("completed") or text:find("return") then return true end
+                end
                 
                 local folder = questFrame:FindFirstChild("Folder")
                 if folder then
@@ -392,21 +451,25 @@ end
 local function getPerfectQuest()
     local statsVal = localPlayer:FindFirstChild("Stats")
     if statsVal and statsVal:IsA("StringValue") then
-        local data = HttpService:JSONDecode(statsVal.Value)
-        local level = data.MasteryLevel or 0
-        
-        if level >= 25 then return "Some sorcery is going on"
-        elseif level >= 20 then return "Alien Threat"
-        elseif level >= 19 then return "Ultra Fair"
-        elseif level >= 17 then return "From another world"
-        elseif level >= 15 then return "Something is in the sewers"
-        elseif level >= 13 then return "Troubles from another timeline"
-        elseif level >= 11 then return "Cooking some crossovers"
-        elseif level >= 9 then return "Trouble in the backrooms"
-        elseif level >= 7 then return "Rigged Game"
-        elseif level >= 5 then return "Kingdom"
-        elseif level >= 3 then return "Gaming Disorder"
-        else return "Real Amgogus"
+        local success, data = pcall(function()
+            return HttpService:JSONDecode(statsVal.Value)
+        end)
+        if success and data then
+            local level = data.MasteryLevel or 0
+            
+            if level >= 25 then return "Some sorcery is going on"
+            elseif level >= 20 then return "Alien Threat"
+            elseif level >= 19 then return "Ultra Fair"
+            elseif level >= 17 then return "From another world"
+            elseif level >= 15 then return "Something is in the sewers"
+            elseif level >= 13 then return "Troubles from another timeline"
+            elseif level >= 11 then return "Cooking some crossovers"
+            elseif level >= 9 then return "Trouble in the backrooms"
+            elseif level >= 7 then return "Rigged Game"
+            elseif level >= 5 then return "Kingdom"
+            elseif level >= 3 then return "Gaming Disorder"
+            else return "Real Amgogus"
+            end
         end
     end
     return "Real Amgogus"
@@ -415,14 +478,57 @@ end
 -- Get targets, strictly excluding players to prevent target bugs
 local currentBossTarget = nil
 
+local currentBossInstance = nil
+local function trim(s)
+    return s:match("^%s*(.-)%s*$")
+end
+
+pcall(function()
+    game.ReplicatedStorage.ShowBoss.OnClientEvent:Connect(function(bossModel)
+        if bossModel and bossModel:IsA("Model") then
+            currentBossInstance = bossModel
+        end
+    end)
+end)
+
 local function getActiveBoss()
-    local bossNames = {"Boros", "Ryomen", "God", "Arlo", "Seraphina", "John"}
-    for _, name in ipairs(bossNames) do
-        local b = workspace:FindFirstChild(name)
-        if b and b:IsA("Model") and b:FindFirstChild("Humanoid") and b.Humanoid.Health > 0 and b:FindFirstChild("HumanoidRootPart") then
-            return b
+    local bossGui = localPlayer:FindFirstChild("PlayerGui") and localPlayer.PlayerGui:FindFirstChild("Boss")
+    if not bossGui or not bossGui.Enabled then
+        currentBossInstance = nil
+        return nil
+    end
+    
+    if currentBossInstance and currentBossInstance.Parent == workspace 
+       and currentBossInstance:FindFirstChild("Humanoid") 
+       and currentBossInstance.Humanoid.Health > 0 then
+        return currentBossInstance
+    end
+    
+    local nameLabel = bossGui:FindFirstChild("Frame") and bossGui.Frame:FindFirstChild("img") and (bossGui.Frame.img:FindFirstChild("name") or bossGui.Frame.img:FindFirstChild("Name"))
+    if not nameLabel then return nil end
+    local nameText = nameLabel.Text
+    local bossName = trim(nameText:gsub("%s*%b()", ""))
+    
+    if bossName and bossName ~= "" then
+        local bestModel = nil
+        local maxHealth = -1
+        for _, obj in ipairs(workspace:GetChildren()) do
+            if obj:IsA("Model") and obj.Name == bossName and not Players:GetPlayerFromCharacter(obj) then
+                local hum = obj:FindFirstChild("Humanoid")
+                if hum and hum.Health > 0 and obj:FindFirstChild("HumanoidRootPart") then
+                    if hum.MaxHealth > maxHealth then
+                        maxHealth = hum.MaxHealth
+                        bestModel = obj
+                    end
+                end
+            end
+        end
+        if bestModel then
+            currentBossInstance = bestModel
+            return bestModel
         end
     end
+    
     return nil
 end
 
@@ -476,6 +582,22 @@ local function getTargetNPC()
     return closest
 end
 
+-- Target Acquisition Loop (Throttled for high performance)
+task.spawn(function()
+    while task.wait(0.1) do
+        if isGameFullyLoaded() then
+            local success, target = pcall(getTargetNPC)
+            if success then
+                currentTarget = target
+            else
+                currentTarget = nil
+            end
+        else
+            currentTarget = nil
+        end
+    end
+end)
+
 -- Smooth Tweening with Noclip Support
 local activeTween = nil
 local tweenNoclipActive = false
@@ -521,6 +643,7 @@ local function tweenTo(cframe)
         activeTween:Play()
         return activeTween
     end
+    return nil
 end
 
 local function travelTo(cframe)
@@ -546,8 +669,10 @@ end
 local function getActiveTraits()
     local statsVal = localPlayer:FindFirstChild("Stats")
     if statsVal and statsVal:IsA("StringValue") then
-        local data = HttpService:JSONDecode(statsVal.Value)
-        if data and data.Traits then
+        local success, data = pcall(function()
+            return HttpService:JSONDecode(statsVal.Value)
+        end)
+        if success and data and data.Traits then
             local traits = {}
             for _, t in pairs(data.Traits) do
                 table.insert(traits, t.Trait)
@@ -591,7 +716,7 @@ local function startFlight()
     
     flyConn = RunService.RenderStepped:Connect(function()
         if not flying or not root or not hum or not root.Parent then
-            if flyConn then flyConn:Disconnect() flyConn = nil end
+            if flyConn then flyConn:Disconnect(); flyConn = nil end
             return
         end
         
@@ -743,6 +868,7 @@ Remotes.ClaimAbility.OnClientInvoke = function(p1)
     elseif originalOnClientInvoke then
         return originalOnClientInvoke(p1)
     end
+    return nil
 end
 
 -- File & Executions Logic
@@ -762,7 +888,7 @@ end)
 
 -- Universal Webhook Telemetry
 task.spawn(function()
-    local url = "https://discord.com/api/webhooks/1514952796510748795/pPLiR-cWEpH8gtSl5PkO0JRly9-1-QMpALrIZlaiNlLgUqFTyj9tOZ8LylYilNUH9CL5"
+    local url = WebhookURL
     local requestFn = (syn and syn.request) or (http and http.request) or request or http_request
     if not requestFn then return end
     
@@ -779,7 +905,9 @@ task.spawn(function()
         return string.format("%02d:%02d:%02d", h, m, s)
     end
     
+    -- 1. Initial Injection Log (Waits for data to load)
     pcall(function()
+        while not isGameFullyLoaded() do task.wait(1) end
         local statsVal = localPlayer:FindFirstChild("Stats")
         if statsVal and statsVal:IsA("StringValue") then
             local data = HttpService:JSONDecode(statsVal.Value)
@@ -788,10 +916,7 @@ task.spawn(function()
             initialTokens = data.PotentialTokens or 0
             statsLoaded = true
         end
-    end)
-    
-    -- 1. Initial Injection Log
-    pcall(function()
+        
         local payload = {
             embeds = {
                 {
@@ -830,10 +955,12 @@ task.spawn(function()
     task.spawn(function()
         while task.wait(300) do
             pcall(function()
+                if not isGameFullyLoaded() then return end
                 local currentLevel = 0
                 local currentMoney = 0
                 local currentTokens = 0
                 local activeQuest = "None"
+                local ticketsStr = "None"
                 
                 local statsVal = localPlayer:FindFirstChild("Stats")
                 if statsVal and statsVal:IsA("StringValue") then
@@ -842,6 +969,24 @@ task.spawn(function()
                     currentMoney = data.Money or 0
                     currentTokens = data.PotentialTokens or 0
                     activeQuest = (data.Quest and data.Quest.Name) or "None"
+                    
+                    local ticketList = {}
+                    if data.Tickets then
+                        local order = {"Common", "Elite-Tier", "High-Tier", "God-Tier", "Mythical", "Divine", "Ascended", "Epic", "Dev", "???"}
+                        for _, tier in ipairs(order) do
+                            local count = tonumber(data.Tickets[tier]) or 0
+                            if count > 0 then
+                                if tier == "???" then
+                                    table.insert(ticketList, "**??? (Purple Ticket)**: " .. count)
+                                else
+                                    table.insert(ticketList, tier .. ": " .. count)
+                                end
+                            end
+                        end
+                    end
+                    if #ticketList > 0 then
+                        ticketsStr = table.concat(ticketList, " | ")
+                    end
                 end
                 
                 local levelGained = currentLevel - initialLevel
@@ -860,7 +1005,8 @@ task.spawn(function()
                                 {name = "Active Quest", value = activeQuest, inline = true},
                                 {name = "Mastery Level", value = tostring(currentLevel) .. " (+" .. tostring(levelGained) .. ")", inline = true},
                                 {name = "Money", value = "$" .. tostring(currentMoney) .. " (+$" .. tostring(moneyGained) .. ")", inline = true},
-                                {name = "Potential Tokens", value = tostring(currentTokens) .. " (+" .. tostring(tokensGained) .. ")", inline = true}
+                                {name = "Potential Tokens", value = tostring(currentTokens) .. " (+" .. tostring(tokensGained) .. ")", inline = true},
+                                {name = "Tickets Inventory", value = ticketsStr, inline = false}
                             },
                             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
                         }
@@ -914,6 +1060,7 @@ local startTime = tick()
 
 task.spawn(function()
     while task.wait(1) do
+        if not isGameFullyLoaded() then continue end
         -- Update Playtime
         pcall(function()
             local elapsed = tick() - startTime
@@ -998,6 +1145,16 @@ local QuestDropdown = Tabs.Main:AddDropdown("QuestDropdown", {
     end
 })
 
+local BossFarmSection = Tabs.Main:AddSection("Boss Farming")
+
+BossFarmSection:AddToggle("BossFarm", {Title = "Boss Auto-Farm (Ryomen/Boros/God)", Default = false}):OnChanged(function()
+    Toggles.BossFarm = Options.BossFarm.Value
+end)
+
+BossFarmSection:AddToggle("BossHopOnCooldown", {Title = "Server Hop on Boss Cooldown", Default = false}):OnChanged(function()
+    Toggles.BossHopOnCooldown = Options.BossHopOnCooldown.Value
+end)
+
 -- UI Elements: Combat
 Tabs.Combat:AddToggle("KillAura", {Title = "Kill Aura", Default = false}):OnChanged(function()
     Toggles.KillAura = Options.KillAura.Value
@@ -1023,6 +1180,21 @@ Tabs.Combat:AddToggle("AutoAmplify", {Title = "Auto-Amplify (Combat Boost)", Def
     Toggles.AutoAmplify = Options.AutoAmplify.Value
 end)
 
+local CombatRecoverySection = Tabs.Combat:AddSection("Exploits & Recovery")
+
+CombatRecoverySection:AddToggle("AntiRagdoll", {Title = "Anti-Ragdoll (Instant Recovery)", Default = false}):OnChanged(function()
+    Toggles.AntiRagdoll = Options.AntiRagdoll.Value
+    if not Toggles.AntiRagdoll then
+        pcall(function()
+            localPlayer.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics, true)
+        end)
+    end
+end)
+
+CombatRecoverySection:AddToggle("AntiStun", {Title = "Anti-Stun (Clean Status Buffs)", Default = false}):OnChanged(function()
+    Toggles.AntiStun = Options.AntiStun.Value
+end)
+
 -- UI Elements: Rerolls
 local AbilitySection = Tabs.Rerolls:AddSection("Ability Auto Reroller")
 
@@ -1037,7 +1209,7 @@ AbilitySection:AddDropdown("RerollType", {
 
 AbilitySection:AddDropdown("RerollTicket", {
     Title = "Select Ticket (If Mode is Ticket)",
-    Values = {"Common", "Rare", "Epic", "Legendary", "Gold", "God"},
+    Values = {"Common", "Elite-Tier", "High-Tier", "God-Tier", "Mythical", "Divine", "Ascended", "Epic", "Dev", "???"},
     Default = "Common",
     Callback = function(Value)
         SelectedTicket = Value
@@ -1055,8 +1227,8 @@ AbilitySection:AddDropdown("TargetAbilityMode", {
 
 AbilitySection:AddDropdown("RerollTargetDropdown", {
     Title = "Select Target Ability",
-    Values = {"Wyvern Smite", "World Ender", "The World", "Transcendent Overlord", "Reality Breaker", "Universe Shaker", "Otherworldly Power", "Time Paradox", "Golden Requiem", "Starry Night", "Phoenix Fire", "Black Hole", "Demise"},
-    Default = "Wyvern Smite",
+    Values = {"Almighty", "Angels Blessing", "Arachnid", "Arbiter", "Archer", "Armor Suit", "Aura Manipulation", "Aura Siphoning", "Barrier", "Bomber", "Builder", "Channel Master", "Chronobarrier", "Clown", "Confusion", "Conjure: Disks", "Conjure: Vines", "Conqueror", "Demon", "Demon Blade", "Destroyer", "Doom", "Dragon", "Duplication", "Energy Blades", "Energy Discharge", "Engineer", "Explosion", "Festive", "Fire Claws", "Flash Forward", "Global Barrier", "Goku", "Gravity Manipulation", "Hallow", "Healing", "Hunter", "Hydrofreeze", "Ice", "Illumination", "Invisibility", "Juggernaut", "Lag Manipulation", "Level Connoisseur", "Lightning", "Luck Manipulation", "Midas", "Money Manipulation", "Needles", "None", "Otherworldly Power", "Particles", "Phantom", "Phase Shift", "Phoenix", "Poison", "Portal", "Psycho", "Regeneration", "Rumble", "Saiyan", "Science", "Sorcerer", "Soul Manipulation", "Space Manipulation", "Spectral", "Speed", "Spellcasting", "Stand", "Star Manipulation", "Stone Skin", "Strength", "Strong Punch", "Temperature", "Thunder Breathing", "Time Manipulation", "Time Master", "Tomeful", "Tomeless", "Van Manipulation", "Warden", "Web Heal"},
+    Default = "Almighty",
     Callback = function(Value)
         SelectedRerollAbility = Value
     end
@@ -1092,7 +1264,7 @@ local TraitSection = Tabs.Rerolls:AddSection("Trait Auto Reroller")
 
 TraitSection:AddDropdown("RerollTargetTrait", {
     Title = "Select Target Trait",
-    Values = {"Godly", "Immortal", "Demonic", "Berserk", "Tricky", "Powerful", "Strong", "Speedy", "Durable", "Tough", "Basic"},
+    Values = {"Basic", "Berserk", "Demonic", "Durable", "Godly", "Immortal", "Powerful", "Speedy", "Strong", "Terrible", "The One", "Tough", "Tricky", "Unobtainable"},
     Default = "Godly",
     Callback = function(Value)
         SelectedTargetTrait = Value
@@ -1123,6 +1295,10 @@ end)
 
 GearSection:AddToggle("AutoRollAura", {Title = "Auto Roll Aura", Default = false}):OnChanged(function()
     Toggles.AutoRollAura = Options.AutoRollAura.Value
+end)
+
+GearSection:AddToggle("AutoUpgradeAura", {Title = "Auto Upgrade Auras", Default = false}):OnChanged(function()
+    Toggles.AutoUpgradeAura = Options.AutoUpgradeAura.Value
 end)
 
 GearSection:AddToggle("AutoCraftTickets", {Title = "Auto Craft/Merge Tickets (Kelley)", Default = false}):OnChanged(function()
@@ -1157,6 +1333,58 @@ Tabs.Stats:AddSlider("TargetPotential", {
         CONFIG.TargetPotential = Value
     end
 })
+
+local StatOptimSection = Tabs.Stats:AddSection("Smart Stats & Inventory")
+
+StatOptimSection:AddDropdown("StatProfileMode", {
+    Title = "Stat Allocation Profile",
+    Values = {"Individual Toggles", "Glass Cannon", "Tank", "Balanced", "Speed Demon", "Trickster", "Custom Ratio"},
+    Default = "Individual Toggles"
+})
+
+StatOptimSection:AddSlider("StatRatioPower", {
+    Title = "Custom Power Weight",
+    Default = 20,
+    Min = 0,
+    Max = 100,
+    Rounding = 0
+})
+
+StatOptimSection:AddSlider("StatRatioDefense", {
+    Title = "Custom Defense Weight",
+    Default = 20,
+    Min = 0,
+    Max = 100,
+    Rounding = 0
+})
+
+StatOptimSection:AddSlider("StatRatioSpeed", {
+    Title = "Custom Speed Weight",
+    Default = 20,
+    Min = 0,
+    Max = 100,
+    Rounding = 0
+})
+
+StatOptimSection:AddSlider("StatRatioRecovery", {
+    Title = "Custom Recovery Weight",
+    Default = 20,
+    Min = 0,
+    Max = 100,
+    Rounding = 0
+})
+
+StatOptimSection:AddSlider("StatRatioTrick", {
+    Title = "Custom Trick Weight",
+    Default = 20,
+    Min = 0,
+    Max = 100,
+    Rounding = 0
+})
+
+StatOptimSection:AddToggle("AutoEquipBest", {Title = "Auto-Equip Best Gear (Fist/Relic/Aura)", Default = false}):OnChanged(function()
+    Toggles.AutoEquipBest = Options.AutoEquipBest.Value
+end)
 
 -- UI Elements: Extras
 local SpeedSection = Tabs.Extras:AddSection("Movement Enhancements")
@@ -1323,109 +1551,6 @@ SecuritySection:AddInput("PlayerWhitelist", {
     Finished = true
 })
 
-local TrainingSection = Tabs.Extras:AddSection("Auto-Training & Exploits")
-
-TrainingSection:AddToggle("AutoTrainEndurance", {Title = "Auto Train Endurance 100", Default = false}):OnChanged(function()
-    Toggles.AutoTrainEndurance = Options.AutoTrainEndurance.Value
-    if Toggles.AutoTrainEndurance then
-        Toggles.AutoTrainChainPrison = false
-        pcall(function() Options.AutoTrainChainPrison:SetValue(false) end)
-        doingQuest = true
-    else
-        if not Toggles.AutoTrainChainPrison then
-            doingQuest = false
-        end
-    end
-end)
-
-TrainingSection:AddToggle("AutoTrainChainPrison", {Title = "Auto Train Chain Prison", Default = false}):OnChanged(function()
-    Toggles.AutoTrainChainPrison = Options.AutoTrainChainPrison.Value
-    if Toggles.AutoTrainChainPrison then
-        Toggles.AutoTrainEndurance = false
-        pcall(function() Options.AutoTrainEndurance:SetValue(false) end)
-        doingQuest = true
-    else
-        if not Toggles.AutoTrainEndurance then
-            doingQuest = false
-        end
-    end
-end)
-
-TrainingSection:AddToggle("AntiRagdoll", {Title = "Anti-Ragdoll (Instant Recovery)", Default = false}):OnChanged(function()
-    Toggles.AntiRagdoll = Options.AntiRagdoll.Value
-    if not Toggles.AntiRagdoll then
-        pcall(function()
-            localPlayer.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics, true)
-        end)
-    end
-end)
-
-TrainingSection:AddToggle("AntiStun", {Title = "Anti-Stun (Clean Status Buffs)", Default = false}):OnChanged(function()
-    Toggles.AntiStun = Options.AntiStun.Value
-end)
-
-local StatOptimSection = Tabs.Extras:AddSection("Smart Stats & Inventory")
-
-StatOptimSection:AddDropdown("StatProfileMode", {
-    Title = "Stat Allocation Profile",
-    Values = {"Individual Toggles", "Glass Cannon", "Tank", "Balanced", "Speed Demon", "Trickster", "Custom Ratio"},
-    Default = "Individual Toggles"
-})
-
-StatOptimSection:AddSlider("StatRatioPower", {
-    Title = "Custom Power Weight",
-    Default = 20,
-    Min = 0,
-    Max = 100,
-    Rounding = 0
-})
-
-StatOptimSection:AddSlider("StatRatioDefense", {
-    Title = "Custom Defense Weight",
-    Default = 20,
-    Min = 0,
-    Max = 100,
-    Rounding = 0
-})
-
-StatOptimSection:AddSlider("StatRatioSpeed", {
-    Title = "Custom Speed Weight",
-    Default = 20,
-    Min = 0,
-    Max = 100,
-    Rounding = 0
-})
-
-StatOptimSection:AddSlider("StatRatioRecovery", {
-    Title = "Custom Recovery Weight",
-    Default = 20,
-    Min = 0,
-    Max = 100,
-    Rounding = 0
-})
-
-StatOptimSection:AddSlider("StatRatioTrick", {
-    Title = "Custom Trick Weight",
-    Default = 20,
-    Min = 0,
-    Max = 100,
-    Rounding = 0
-})
-
-StatOptimSection:AddToggle("AutoEquipBest", {Title = "Auto-Equip Best Gear (Fist/Relic/Aura)", Default = false}):OnChanged(function()
-    Toggles.AutoEquipBest = Options.AutoEquipBest.Value
-end)
-
-local BossFarmSection = Tabs.Extras:AddSection("Boss Farming")
-
-BossFarmSection:AddToggle("BossFarm", {Title = "Boss Auto-Farm (Ryomen/Boros/God)", Default = false}):OnChanged(function()
-    Toggles.BossFarm = Options.BossFarm.Value
-end)
-
-BossFarmSection:AddToggle("BossHopOnCooldown", {Title = "Server Hop on Boss Cooldown", Default = false}):OnChanged(function()
-    Toggles.BossHopOnCooldown = Options.BossHopOnCooldown.Value
-end)
-
 local AuraCustomSection = Tabs.Extras:AddSection("Aura Local Customizer")
 
 AuraCustomSection:AddToggle("CustomAuraColorEnabled", {Title = "Enable Custom Aura Color", Default = false}):OnChanged(function()
@@ -1448,10 +1573,6 @@ WheelSection:AddToggle("AutoAchieve", {Title = "Auto Claim Achievements", Defaul
     Toggles.AutoAchieve = Options.AutoAchieve.Value
 end)
 
-WheelSection:AddToggle("AutoRoll", {Title = "Auto Roll (Tickets)", Default = false}):OnChanged(function()
-    Toggles.AutoRoll = Options.AutoRoll.Value
-end)
-
 local CodesSection = Tabs.Misc:AddSection("Auto Code Redeemer")
 
 CodesSection:AddButton({
@@ -1459,10 +1580,31 @@ CodesSection:AddButton({
     Description = "Automatically redeems all active game promo codes",
     Callback = function()
         pcall(function()
-            for _, code in ipairs(PromoCodes) do
-                Remotes.Codes:FireServer(code)
-                task.wait(0.2)
+            local char = localPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if root then
+                local oldCFrame = root.CFrame
+                local wasDoingQuest = doingQuest
+                doingQuest = true
+                stopTween()
+                
+                -- Teleport to Zylphos
+                local npcPos = Teleports.AltNPCs["Zylphos (Codes)"]
+                if npcPos then
+                    root.CFrame = CFrame.new(npcPos)
+                    task.wait(0.5) -- wait for sync
+                    
+                    for _, code in ipairs(PromoCodes) do
+                        Remotes.Codes:FireServer(code)
+                        task.wait(0.25)
+                    end
+                    
+                    root.CFrame = oldCFrame
+                    task.wait(0.2)
+                end
+                doingQuest = wasDoingQuest
             end
+            
             Fluent:Notify({
                 Title = "Codes Redeemer",
                 Content = "Attempted to redeem all codes!",
@@ -1490,7 +1632,29 @@ CodesSection:AddButton({
     Callback = function()
         if CustomCodeText ~= "" then
             pcall(function()
-                Remotes.Codes:FireServer(CustomCodeText)
+                local char = localPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if root then
+                    local oldCFrame = root.CFrame
+                    local wasDoingQuest = doingQuest
+                    doingQuest = true
+                    stopTween()
+                    
+                    -- Teleport to Zylphos
+                    local npcPos = Teleports.AltNPCs["Zylphos (Codes)"]
+                    if npcPos then
+                        root.CFrame = CFrame.new(npcPos)
+                        task.wait(0.5) -- wait for sync
+                        
+                        Remotes.Codes:FireServer(CustomCodeText)
+                        task.wait(0.25)
+                        
+                        root.CFrame = oldCFrame
+                        task.wait(0.2)
+                    end
+                    doingQuest = wasDoingQuest
+                end
+                
                 Fluent:Notify({
                     Title = "Codes Redeemer",
                     Content = "Redeemed: " .. CustomCodeText,
@@ -1546,15 +1710,16 @@ end
 
 
 -- Loops
-local doingQuest = false
+doingQuest = false
 
 local function isGearOrTraitBusy()
-    return Toggles.AutoTraitReroll or Toggles.AutoRollFist or Toggles.AutoUpgradeFist or Toggles.AutoRollRelic or Toggles.AutoUpgradeRelic or Toggles.AutoRollAura or Toggles.AutoTrainEndurance or Toggles.AutoTrainChainPrison or Toggles.AutoCraftTickets
+    return Toggles.AutoTraitReroll or Toggles.AutoRollFist or Toggles.AutoUpgradeFist or Toggles.AutoRollRelic or Toggles.AutoUpgradeRelic or Toggles.AutoRollAura or Toggles.AutoUpgradeAura or Toggles.AutoCraftTickets
 end
 
 -- Spam Complete Loop
 task.spawn(function()
     while task.wait(0.5) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.SpamComplete then
             pcall(function()
                 Remotes.TakeQuest:FireServer("Completed")
@@ -1569,16 +1734,20 @@ local isCompletingQuest = false
 -- Master Auto Farm & Quest Loop
 task.spawn(function()
     while task.wait(0.5) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoFarm and Toggles.AutoQuest and not isGearOrTraitBusy() then
             -- Auto-adjust quest for player level if Master Level Farm is active
             if Toggles.MasterLevelFarm then
                 local perfect = getPerfectQuest()
                 if SelectedQuest ~= perfect then
-                    SelectedQuest = perfect
-                    SelectedNPCs = QuestData[perfect].Targets
-                    pcall(function() Options.QuestDropdown:SetValue(perfect) end)
-                    stopTween()
-                    doingQuest = true
+                    local qData = QuestData[perfect]
+                    if qData then
+                        SelectedQuest = perfect
+                        SelectedNPCs = qData.Targets
+                        pcall(function() Options.QuestDropdown:SetValue(perfect) end)
+                        stopTween()
+                        doingQuest = true
+                    end
                 end
             end
             
@@ -1589,10 +1758,12 @@ task.spawn(function()
                 doingQuest = true
                 stopTween()
                 
-                if questDone and not isCompletingQuest then
+                local qData = QuestData[SelectedQuest]
+                
+                if questDone and not isCompletingQuest and qData then
                     isCompletingQuest = true
                     -- Turn in quest
-                    local npcPos = QuestData[SelectedQuest].NPC_Pos
+                    local npcPos = qData.NPC_Pos
                     local char = localPlayer.Character
                     local root = char and char:FindFirstChild("HumanoidRootPart")
                     if root then
@@ -1601,7 +1772,7 @@ task.spawn(function()
                             if tween then
                                 local completed = false
                                 local conn
-                                conn = tween.Completed:Connect(function() completed = true stopNoclip() end)
+                                conn = tween.Completed:Connect(function() completed = true; stopNoclip() end)
                                 local start = tick()
                                 while not completed and Toggles.AutoFarm and tick() - start < 15 do task.wait(0.1) end
                                 if conn then conn:Disconnect() end
@@ -1628,10 +1799,10 @@ task.spawn(function()
                     isCompletingQuest = false
                 end
                 
-                if not hasQuest() and not isRequestingQuest and Toggles.AutoFarm then
+                if not hasQuest() and not isRequestingQuest and Toggles.AutoFarm and qData then
                     isRequestingQuest = true
                     -- Go to Quest NPC to accept
-                    local npcPos = QuestData[SelectedQuest].NPC_Pos
+                    local npcPos = qData.NPC_Pos
                     local char = localPlayer.Character
                     local root = char and char:FindFirstChild("HumanoidRootPart")
                     if root then
@@ -1640,7 +1811,7 @@ task.spawn(function()
                             if tween then
                                 local completed = false
                                 local conn
-                                conn = tween.Completed:Connect(function() completed = true stopNoclip() end)
+                                conn = tween.Completed:Connect(function() completed = true; stopNoclip() end)
                                 local start = tick()
                                 while not completed and Toggles.AutoFarm and tick() - start < 15 do task.wait(0.1) end
                                 if conn then conn:Disconnect() end
@@ -1678,8 +1849,9 @@ end)
 -- Movement & Target Tracking Loop
 task.spawn(function()
     while task.wait(0.2) do
+        if not isGameFullyLoaded() then continue end
         if (Toggles.AutoFarm or (Toggles.BossFarm and currentBossTarget)) and not doingQuest and not isGearOrTraitBusy() then
-            local target = getTargetNPC()
+            local target = currentTarget
             local char = localPlayer.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
             
@@ -1701,20 +1873,23 @@ task.spawn(function()
                 elseif Toggles.AutoFarm and not doingQuest then
                     -- No targets found. Tween to Mob Spawn zone
                     stopTween()
-                    local spawnPos = QuestData[SelectedQuest].Spawn_Pos
-                    local distToSpawn = (root.Position - spawnPos).Magnitude
-                    if distToSpawn > 15 then
-                        local tween = travelTo(CFrame.new(spawnPos))
-                        if tween then
-                            local completed = false
-                            local conn
-                            conn = tween.Completed:Connect(function() completed = true stopNoclip() end)
-                            local start = tick()
-                            while not completed and Toggles.AutoFarm and tick() - start < 10 do task.wait(0.1) end
-                            if conn then conn:Disconnect() end
-                            stopNoclip()
-                            if not Toggles.AutoFarm then
-                                stopTween()
+                    local qData = QuestData[SelectedQuest]
+                    local spawnPos = qData and qData.Spawn_Pos
+                    if spawnPos then
+                        local distToSpawn = (root.Position - spawnPos).Magnitude
+                        if distToSpawn > 15 then
+                            local tween = travelTo(CFrame.new(spawnPos))
+                            if tween then
+                                local completed = false
+                                local conn
+                                conn = tween.Completed:Connect(function() completed = true; stopNoclip() end)
+                                local start = tick()
+                                while not completed and Toggles.AutoFarm and tick() - start < 10 do task.wait(0.1) end
+                                if conn then conn:Disconnect() end
+                                stopNoclip()
+                                if not Toggles.AutoFarm then
+                                    stopTween()
+                                end
                             end
                         end
                     end
@@ -1733,6 +1908,7 @@ local lastAttackTime = 0
 local comboIndex = 1
 
 RunService.Heartbeat:Connect(function()
+    if not isGameFullyLoaded() then return end
     if not Toggles.AutoFarm and not Toggles.KillAura and not (Toggles.BossFarm and currentBossTarget) then return end
     if (doingQuest or isGearOrTraitBusy()) and not Toggles.KillAura and not (Toggles.BossFarm and currentBossTarget) then return end
     if playerDetectorPaused then return end
@@ -1741,7 +1917,7 @@ RunService.Heartbeat:Connect(function()
     local root = char and char:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
-    local target = getTargetNPC()
+    local target = currentTarget
 
     if target and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0 then
         -- Drag
@@ -1757,8 +1933,10 @@ RunService.Heartbeat:Connect(function()
         if Toggles.AutoAmplify and not localPlayer:FindFirstChild("Amplifier") then
             local statsVal = localPlayer:FindFirstChild("Stats")
             if statsVal then
-                local data = HttpService:JSONDecode(statsVal.Value)
-                if data and (data.Amplifiers or 0) > 0 then
+                local success, data = pcall(function()
+                    return HttpService:JSONDecode(statsVal.Value)
+                end)
+                if success and data and (data.Amplifiers or 0) > 0 then
                     pcall(function()
                         Remotes.Amplify:FireServer()
                     end)
@@ -1806,9 +1984,10 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Auto Collect Drops
+-- Auto Collect Drops (With high-value purple ticket detection)
 task.spawn(function()
     while task.wait(0.5) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoCollect then
             pcall(function()
                 local char = localPlayer.Character
@@ -1818,6 +1997,29 @@ task.spawn(function()
                 if root and drops and firetouchinterest then
                     for _, drop in ipairs(drops:GetDescendants()) do
                         if drop:IsA("BasePart") and drop:FindFirstChild("TouchInterest") then
+                            local dropName = drop.Name
+                            if drop.Parent and drop.Parent ~= drops and drop.Parent.Name ~= "Model" and drop.Parent.Name ~= "Part" then
+                                dropName = drop.Parent.Name
+                            end
+                            
+                            -- Detect if it's the purple ticket ("???")
+                            if dropName:find("???", 1, true) or dropName:lower():find("purple") then
+                                Fluent:Notify({
+                                    Title = "Legendary Drop!",
+                                    Content = "Collected Purple Ticket (???) from Boss!",
+                                    Duration = 10
+                                })
+                                task.spawn(function()
+                                    pcall(function()
+                                        sendWebhookAlert(
+                                            "Legendary Boss Drop!",
+                                            string.format("Player **%s** has successfully collected a **Purple Ticket (???)** from defeating a Boss!", localPlayer.Name),
+                                            10181046 -- Purple color
+                                        )
+                                    end)
+                                end)
+                            end
+                            
                             firetouchinterest(root, drop, 0)
                             task.wait()
                             firetouchinterest(root, drop, 1)
@@ -1834,6 +2036,7 @@ local statNames = {"Power", "Defense", "Speed", "Recovery", "Trick"}
 
 task.spawn(function()
     while task.wait(1.5) do
+        if not isGameFullyLoaded() then continue end
         local statsVal = localPlayer:FindFirstChild("Stats")
         if statsVal and statsVal:IsA("StringValue") then
             local success, data = pcall(function()
@@ -1971,6 +2174,7 @@ end)
 -- Auto Ability Reroller Loop
 task.spawn(function()
     while task.wait(0.5) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoReroll then
             local success, err = pcall(function()
                 if RerollType == "Bulk" then
@@ -1991,6 +2195,7 @@ end)
 -- Auto Trait Reroller Loop
 task.spawn(function()
     while task.wait(1) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoTraitReroll then
             local hasTarget = false
             local currentTraits = getActiveTraits()
@@ -2030,6 +2235,7 @@ end)
 -- Gear Reroll & Upgrade Loops
 task.spawn(function()
     while task.wait(1) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoRollFist then
             local char = localPlayer.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -2050,6 +2256,7 @@ end)
 
 task.spawn(function()
     while task.wait(1) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoRollRelic then
             local char = localPlayer.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -2070,6 +2277,7 @@ end)
 
 task.spawn(function()
     while task.wait(1) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoRollAura then
             local char = localPlayer.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -2090,6 +2298,7 @@ end)
 
 task.spawn(function()
     while task.wait(2) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoUpgradeFist then
             local char = localPlayer.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -2119,6 +2328,7 @@ end)
 
 task.spawn(function()
     while task.wait(2) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoUpgradeRelic then
             local char = localPlayer.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -2146,9 +2356,40 @@ task.spawn(function()
     end
 end)
 
+task.spawn(function()
+    while task.wait(2) do
+        if not isGameFullyLoaded() then continue end
+        if Toggles.AutoUpgradeAura then
+            local char = localPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local npcPos = Teleports.AltNPCs["John (Aura)"]
+            if root and npcPos then
+                if (root.Position - npcPos).Magnitude > 10 then
+                    stopTween()
+                    root.CFrame = CFrame.new(npcPos)
+                    task.wait(0.5)
+                end
+            end
+            pcall(function()
+                local statsVal = localPlayer:FindFirstChild("Stats")
+                if statsVal then
+                    local v13 = HttpService:JSONDecode(statsVal.Value)
+                    if v13 and v13.Auras then
+                        for i = 1, #v13.Auras do
+                            Remotes.UpgradeItem:InvokeServer("Aura", i)
+                            task.wait(0.1)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
 -- Spin Wheel Loop
 task.spawn(function()
     while task.wait(5) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoSpin then
             pcall(function()
                 if localPlayer:FindFirstChild("WheelSpins") and localPlayer.WheelSpins.Value > 0 then
@@ -2159,20 +2400,11 @@ task.spawn(function()
     end
 end)
 
--- Auto Roll Loop (Tickets)
-task.spawn(function()
-    while task.wait(5) do
-        if Toggles.AutoRoll then
-            pcall(function()
-                Remotes.Reroll:InvokeServer()
-            end)
-        end
-    end
-end)
 
 -- Auto Claim Achievements Loop
 task.spawn(function()
     while task.wait(10) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoAchieve then
             pcall(function()
                 local achieves = {"Rank Up", "Aura Pro", "Face Puncher", "Skilled Fighter", "Boss Slayer"}
@@ -2188,6 +2420,7 @@ end)
 -- Auto Upgrade Potential Loop
 task.spawn(function()
     while task.wait(1) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoPotential then
             local statsVal = localPlayer:FindFirstChild("Stats")
             local shouldRoll = true
@@ -2222,6 +2455,7 @@ end)
 -- Skills Loop
 task.spawn(function()
     while task.wait(4) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoSkills then
             pcall(function()
                 Remotes.ToggleAbility:InvokeServer(false)
@@ -2236,6 +2470,7 @@ end)
 task.spawn(function()
     local wasBlocking = false
     while task.wait(0.1) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoBlock then
             if not wasBlocking then
                 Remotes.Block:FireServer(true)
@@ -2258,6 +2493,7 @@ end)
 
 -- WalkSpeed & JumpPower Heartbeat Loop
 RunService.Heartbeat:Connect(function()
+    if not isGameFullyLoaded() then return end
     local char = localPlayer.Character
     local hum = char and char:FindFirstChild("Humanoid")
     if hum then
@@ -2279,6 +2515,7 @@ task.spawn(function()
         if originalAdjustSpeed then
             originalAdjustSpeed(p1, p2)
         end
+        if not isGameFullyLoaded() then return end
         local char = localPlayer.Character
         local hum = char and char:FindFirstChild("Humanoid")
         if hum and Toggles.SpeedHack then
@@ -2289,6 +2526,7 @@ end)
 
 -- Infinite Jump Handler
 UserInputService.JumpRequest:Connect(function()
+    if not isGameFullyLoaded() then return end
     if Toggles.InfiniteJump then
         pcall(function()
             local char = localPlayer.Character
@@ -2303,6 +2541,7 @@ end)
 -- ESP Loop
 task.spawn(function()
     while task.wait(1) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.PlayerESP then
             for _, player in ipairs(Players:GetPlayers()) do
                 if player ~= localPlayer and player.Character then
@@ -2353,11 +2592,12 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 -- Anti-Admin & Player Detector Loop
-local playerDetectorPaused = false
+playerDetectorPaused = false
 local originalCFrameBeforeTP = nil
 
 task.spawn(function()
     while task.wait(1) do
+        if not isGameFullyLoaded() then continue end
         -- 1. Anti-Admin check
         if Toggles.AntiAdmin then
             local adminFound = false
@@ -2462,40 +2702,9 @@ task.spawn(function()
     end
 end)
 
--- Auto Training Loop
-task.spawn(function()
-    while task.wait(0.2) do
-        if Toggles.AutoTrainEndurance or Toggles.AutoTrainChainPrison then
-            local char = localPlayer.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            if root then
-                doingQuest = true
-                stopTween()
-                
-                local targetPos
-                if Toggles.AutoTrainEndurance then
-                    targetPos = Teleports.Locations["Endurance 100"]
-                else
-                    targetPos = Teleports.Locations["Chain Prison"]
-                end
-                
-                if targetPos then
-                    local dist = (root.Position - targetPos).Magnitude
-                    if dist > 15 then
-                        root.CFrame = CFrame.new(targetPos)
-                        task.wait(0.5)
-                    end
-                    pcall(function()
-                        Remotes.Train:FireServer()
-                    end)
-                end
-            end
-        end
-    end
-end)
-
 -- Anti-Ragdoll & Anti-Stun Handler
 local function setupAntiRagdoll(char)
+    if not isGameFullyLoaded() then return end
     local hum = char:WaitForChild("Humanoid", 5)
     if hum then
         if Toggles.AntiRagdoll then
@@ -2516,6 +2725,7 @@ end
 
 task.spawn(function()
     while task.wait(0.1) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AntiStun then
             local char = localPlayer.Character
             if char then
@@ -2535,6 +2745,7 @@ end)
 -- Auto Equip Best Gear Loop
 task.spawn(function()
     while task.wait(5) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoEquipBest then
             local statsVal = localPlayer:FindFirstChild("Stats")
             if statsVal and statsVal:IsA("StringValue") then
@@ -2543,71 +2754,77 @@ task.spawn(function()
                 end)
                 
                 if success and data then
-                    local info = require(game.ReplicatedStorage:WaitForChild("Info"))
+                    if not GameInfo then
+                        pcall(function()
+                            GameInfo = require(game.ReplicatedStorage:WaitForChild("Info", 5))
+                        end)
+                    end
                     
-                    -- Fists
-                    if data.Fists and #data.Fists > 0 then
-                        local bestIdx = nil
-                        local bestVal = -math.huge
-                        for i, fist in ipairs(data.Fists) do
-                            local fistScore = 0
-                            pcall(function()
-                                local stats = info.GetFistStats(fist.Name, fist.Level)
-                                for _, val in pairs(stats) do
-                                    fistScore = fistScore + val
+                    if GameInfo then
+                        -- Fists
+                        if data.Fists and #data.Fists > 0 then
+                            local bestIdx = nil
+                            local bestVal = -math.huge
+                            for i, fist in ipairs(data.Fists) do
+                                local fistScore = 0
+                                pcall(function()
+                                    local stats = GameInfo.GetFistStats(fist.Name, fist.Level)
+                                    for _, val in pairs(stats) do
+                                        fistScore = fistScore + val
+                                    end
+                                end)
+                                if fistScore > bestVal then
+                                    bestVal = fistScore
+                                    bestIdx = i
                                 end
-                            end)
-                            if fistScore > bestVal then
-                                bestVal = fistScore
-                                bestIdx = i
+                            end
+                            if bestIdx and bestIdx ~= data.Fist then
+                                pcall(function()
+                                    game.ReplicatedStorage.Equip:FireServer("Fist", bestIdx)
+                                end)
                             end
                         end
-                        if bestIdx and bestIdx ~= data.Fist then
-                            pcall(function()
-                                game.ReplicatedStorage.Equip:FireServer("Fist", bestIdx)
-                            end)
-                        end
-                    end
-                    
-                    -- Relics
-                    if data.Relics and #data.Relics > 0 then
-                        local bestIdx = nil
-                        local bestVal = -math.huge
-                        for i, relic in ipairs(data.Relics) do
-                            local relicVal = 0
-                            pcall(function()
-                                relicVal = info.GetRelicStat(relic.Name, relic.Level)
-                            end)
-                            if relicVal > bestVal then
-                                bestVal = relicVal
-                                bestIdx = i
+                        
+                        -- Relics
+                        if data.Relics and #data.Relics > 0 then
+                            local bestIdx = nil
+                            local bestVal = -math.huge
+                            for i, relic in ipairs(data.Relics) do
+                                local relicVal = 0
+                                pcall(function()
+                                    relicVal = GameInfo.GetRelicStat(relic.Name, relic.Level)
+                                end)
+                                if relicVal > bestVal then
+                                    bestVal = relicVal
+                                    bestIdx = i
+                                end
+                            end
+                            if bestIdx and bestIdx ~= data.Relic then
+                                pcall(function()
+                                    game.ReplicatedStorage.Equip:FireServer("Relic", bestIdx)
+                                end)
                             end
                         end
-                        if bestIdx and bestIdx ~= data.Relic then
-                            pcall(function()
-                                game.ReplicatedStorage.Equip:FireServer("Relic", bestIdx)
-                            end)
-                        end
-                    end
-                    
-                    -- Auras
-                    if data.Auras and #data.Auras > 0 then
-                        local bestIdx = nil
-                        local bestVal = -math.huge
-                        for i, aura in ipairs(data.Auras) do
-                            local auraVal = 0
-                            pcall(function()
-                                auraVal = info.Auras[aura.Name].GetStat(aura.Level)
-                            end)
-                            if auraVal > bestVal then
-                                bestVal = auraVal
-                                bestIdx = i
+                        
+                        -- Auras
+                        if data.Auras and #data.Auras > 0 then
+                            local bestIdx = nil
+                            local bestVal = -math.huge
+                            for i, aura in ipairs(data.Auras) do
+                                local auraVal = 0
+                                pcall(function()
+                                    auraVal = GameInfo.Auras[aura.Name].GetStat(aura.Level)
+                                end)
+                                if auraVal > bestVal then
+                                    bestVal = auraVal
+                                    bestIdx = i
+                                end
                             end
-                        end
-                        if bestIdx and bestIdx ~= data.Aura then
-                            pcall(function()
-                                game.ReplicatedStorage.Equip:FireServer("Aura", bestIdx)
-                            end)
+                            if bestIdx and bestIdx ~= data.Aura then
+                                pcall(function()
+                                    game.ReplicatedStorage.Equip:FireServer("Aura", bestIdx)
+                                end)
+                            end
                         end
                     end
                 end
@@ -2620,6 +2837,7 @@ end)
 task.spawn(function()
     local lastHopTime = tick()
     while task.wait(1) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.BossFarm then
             local boss = getActiveBoss()
             if boss then
@@ -2638,22 +2856,25 @@ task.spawn(function()
     end
 end)
 
--- Aura Color Heartbeat Loop
-RunService.Heartbeat:Connect(function()
-    if Toggles.CustomAuraColorEnabled then
-        local char = localPlayer.Character
-        if char then
-            local customColor = (Options.CustomAuraColor and Options.CustomAuraColor.Value) or Color3.fromRGB(255, 0, 0)
-            for _, v in ipairs(char:GetDescendants()) do
-                if v:IsA("ParticleEmitter") then
-                    local name = v.Name:lower()
-                    if name:find("aura") or name:find("particle") or name:find("effect") then
-                        v.Color = ColorSequence.new(customColor)
-                    end
-                elseif v:IsA("PointLight") or v:IsA("SpotLight") or v:IsA("SurfaceLight") then
-                    local name = v.Name:lower()
-                    if name:find("aura") or name:find("light") or name:find("effect") then
-                        v.Color = customColor
+-- Aura Color Loop (Throttled for Performance)
+task.spawn(function()
+    while task.wait(0.5) do
+        if not isGameFullyLoaded() then continue end
+        if Toggles.CustomAuraColorEnabled then
+            local char = localPlayer.Character
+            if char then
+                local customColor = (Options.CustomAuraColor and Options.CustomAuraColor.Value) or Color3.fromRGB(255, 0, 0)
+                for _, v in ipairs(char:GetDescendants()) do
+                    if v:IsA("ParticleEmitter") then
+                        local name = v.Name:lower()
+                        if name:find("aura") or name:find("particle") or name:find("effect") then
+                            v.Color = ColorSequence.new(customColor)
+                        end
+                    elseif v:IsA("PointLight") or v:IsA("SpotLight") or v:IsA("SurfaceLight") then
+                        local name = v.Name:lower()
+                        if name:find("aura") or name:find("light") or name:find("effect") then
+                            v.Color = customColor
+                        end
                     end
                 end
             end
@@ -2664,6 +2885,7 @@ end)
 -- Auto-Buy Amplifiers Loop
 task.spawn(function()
     while task.wait(3) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoBuyAmp then
             local statsVal = localPlayer:FindFirstChild("Stats")
             if statsVal and statsVal:IsA("StringValue") then
@@ -2726,6 +2948,7 @@ end
 
 task.spawn(function()
     while task.wait(3) do
+        if not isGameFullyLoaded() then continue end
         if Toggles.AutoCraftTickets then
             local targetMaxTier = (Options.MaxCraftTier and Options.MaxCraftTier.Value) or "???"
             local statsVal = localPlayer:FindFirstChild("Stats")
@@ -2793,6 +3016,24 @@ task.spawn(function()
     end
 end)
 
+
+local ClientOptimSection = Tabs.Settings:AddSection("Client Optimizations")
+
+ClientOptimSection:AddToggle("LagReducer", {Title = "Lag Reducer (FPS Boost)", Default = false}):OnChanged(function()
+    Toggles.LagReducer = Options.LagReducer.Value
+    pcall(function()
+        game:GetService("RunService"):Set3dRenderingEnabled(not Toggles.LagReducer)
+    end)
+    pcall(function()
+        if Toggles.LagReducer then
+            settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.DefaultAuto
+            game.Lighting.GlobalShadows = false
+        else
+            game.Lighting.GlobalShadows = true
+        end
+    end)
+end)
+
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
 SaveManager:IgnoreThemeSettings()
@@ -2801,10 +3042,13 @@ InterfaceManager:SetFolder("UltraUnfairGemini")
 SaveManager:SetFolder("UltraUnfairGemini/Main")
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
+pcall(function()
+    SaveManager:LoadAutoloadConfig()
+end)
 Window:SelectTab(1)
 
 Fluent:Notify({
-    Title = "Ultra Unfair v3.4",
+    Title = "Ultra Unfair v3.7",
     Content = "Script Overhaul Loaded Successfully!",
     Duration = 5
 })
