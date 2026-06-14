@@ -584,7 +584,7 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 
 local Window = Fluent:CreateWindow({
     Title = "Grow A Garden 2",
-    SubTitle = "Premium Automation Script [v2.5]",
+    SubTitle = "Premium Automation Script [v2.6]",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Acrylic = false, -- FIXED: Disabled background blur
@@ -621,6 +621,11 @@ local gameParagraph = Tabs.Home:AddParagraph({
 local updatesTitle = Tabs.Updates:AddParagraph({
     Title = "Version History",
     Content = "Below you can find the development changelog and update history for Grow A Garden 2 script."
+})
+
+local v2_6Paragraph = Tabs.Updates:AddParagraph({
+    Title = "Version 2.6",
+    Content = "• Version Control & Auto-Updater:\n  Adds a background loop checking statusgg2.lua on GitHub every 5 minutes and kicks the player if an update is found.\n\n• Diagnostics Setup:\n  Integrates a diagnostic script in the test folder to troubleshoot miscellaneous features."
 })
 
 local v2_5Paragraph = Tabs.Updates:AddParagraph({
@@ -697,7 +702,7 @@ local function sendStatsToDiscord(timeString, sheckles, plotId, executor)
 end
 
 -- Version Checker (Checks immediately and then every 5 minutes / 300 seconds)
-local currentVersion = "v2.5"
+local currentVersion = "v2.6"
 task.spawn(function()
     while true do
         local success, result = pcall(function()
