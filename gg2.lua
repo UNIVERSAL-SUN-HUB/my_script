@@ -23,6 +23,29 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
 
+local SingleHarvestSeeds = {
+    ["Carrot"] = true,
+    ["Tulip"] = true,
+    ["Mushroom"] = true,
+    ["Bamboo"] = true,
+    ["Boneboo"] = true,
+    ["Bendboo"] = true,
+    ["Cactus"] = true,
+    ["Baby Cactus"] = true,
+    ["Watermelon"] = true,
+    ["Pumpkin"] = true,
+    ["Great Pumpkin"] = true,
+    ["Giant Pinecone"] = true,
+    ["Taro Flower"] = true,
+    ["Zen Rocks"] = true,
+    ["Parasol Flower"] = true,
+    ["Sunflower"] = true,
+    ["Legacy Sunflower"] = true,
+    ["Venus Fly Trap"] = true,
+    ["Beast Buttercup"] = true,
+    ["Beast Shadow Buttercup"] = true,
+}
+
 -- Stats tracking setup to count executions per player in local workspace
 local function getStatsFile()
     local folder = "GrowAGarden2"
@@ -179,6 +202,7 @@ _G.AutoBuyCrates = false
 _G.AutoBuyGears = false
 
 _G.AutoSteal = false
+_G.StealAndKickOwner = false
 _G.ProtectGarden = false
 _G.ShovelAura = false
 _G.EquipShovelKillAura = false
@@ -480,6 +504,16 @@ local function hitPlayerWithShovel(targetPlayer)
             shovel.Parent = char
             task.wait(0.1)
         end
+        
+        -- Align character facing the target and ensure distance validation (dist <= 12 and dot >= 0.3)
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local targetHrp = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp and targetHrp then
+            local targetPos = targetHrp.Position
+            local ourPos = hrp.Position
+            hrp.CFrame = CFrame.lookAt(ourPos, Vector3.new(targetPos.X, ourPos.Y, targetPos.Z))
+        end
+        
         Networking.Shovel.SwingShovel:Fire()
         Networking.Shovel.HitPlayer:Fire(targetPlayer.UserId)
     end
@@ -518,7 +552,12 @@ local function autoEquipAndKillAura()
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                 local dist = (player.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-                if dist <= 18 then
+                if dist <= 11.5 then
+                    -- Face target player to satisfy the server's dot >= 0.3 requirement
+                    local targetPos = player.Character.HumanoidRootPart.Position
+                    local ourPos = hrp.Position
+                    hrp.CFrame = CFrame.lookAt(ourPos, Vector3.new(targetPos.X, ourPos.Y, targetPos.Z))
+                    
                     Networking.Shovel.SwingShovel:Fire()
                     Networking.Shovel.HitPlayer:Fire(player.UserId)
                 end
@@ -532,7 +571,7 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 
 local Window = Fluent:CreateWindow({
     Title = "Grow A Garden 2",
-    SubTitle = "Premium Automation Script",
+    SubTitle = "Premium Automation Script [v2.4]",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Acrylic = false, -- FIXED: Disabled background blur
@@ -545,7 +584,8 @@ local Tabs = {
     Main = Window:AddTab({ Title = "Auto Farm", Icon = "sprout" }),
     Steal = Window:AddTab({ Title = "Auto Steal", Icon = "swords" }),
     Shops = Window:AddTab({ Title = "Shops & Sell", Icon = "shopping-cart" }),
-    Misc = Window:AddTab({ Title = "Miscellaneous", Icon = "settings" })
+    Misc = Window:AddTab({ Title = "Miscellaneous", Icon = "settings" }),
+    Updates = Window:AddTab({ Title = "Updates", Icon = "history" })
 }
 
 -- Home Tab Paragraphs
@@ -562,6 +602,17 @@ local sessionParagraph = Tabs.Home:AddParagraph({
 local gameParagraph = Tabs.Home:AddParagraph({
     Title = "Game & Server Info",
     Content = "Loading server details..."
+})
+
+-- Updates Tab Paragraphs
+local updatesTitle = Tabs.Updates:AddParagraph({
+    Title = "Version History",
+    Content = "Below you can find the development changelog and update history for Grow A Garden 2 script."
+})
+
+local v2_4Paragraph = Tabs.Updates:AddParagraph({
+    Title = "Version 2.4",
+    Content = "• Steal + Kick Owner Toggle:\n  Adds a toggle to shovel-kick plot owners if they are present in their garden so you can steal their crops.\n\n• Auto Farm Better Fix:\n  Fixes a bug where single-harvest crops were not recognized or farmed. The script now correctly purchases and plants Carrot, Tulip, Mushroom, Bamboo, Boneboo, Bendboo, Cactus, Watermelon, Pumpkin, Great Pumpkin, Giant Pinecone, Taro Flower, Zen Rocks, Parasol Flower, Sunflower, Venus Fly Trap, and Beast Buttercups."
 })
 
 -- Discord Webhook Logging Helper Functions
@@ -765,6 +816,11 @@ local ToggleSteal = Tabs.Steal:AddToggle("AutoStealToggle", {
             end)
         end
     end
+})
+local ToggleStealAndKick = Tabs.Steal:AddToggle("StealAndKickOwnerToggle", {
+    Title = "Steal + Kick Owner",
+    Default = false,
+    Callback = function(v) _G.StealAndKickOwner = v end
 })
 local ToggleProtect = Tabs.Steal:AddToggle("ProtectGardenToggle", {
     Title = "Protect Garden (Auto-Kick Visitors)",
@@ -1260,7 +1316,12 @@ task.spawn(function()
                     for _, player in ipairs(Players:GetPlayers()) do
                         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                             local dist = (player.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-                            if dist <= 18 then
+                            if dist <= 11.5 then
+                                -- Face target player to pass server validation
+                                local targetPos = player.Character.HumanoidRootPart.Position
+                                local ourPos = hrp.Position
+                                hrp.CFrame = CFrame.lookAt(ourPos, Vector3.new(targetPos.X, ourPos.Y, targetPos.Z))
+                                
                                 Networking.Shovel.SwingShovel:Fire()
                                 Networking.Shovel.HitPlayer:Fire(player.UserId)
                             end
@@ -1284,8 +1345,13 @@ task.spawn(function()
                         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                             local dist = (player.Character.HumanoidRootPart.Position - prim.Position).Magnitude
                             if dist <= 60 then
+                                local targetHRP = player.Character.HumanoidRootPart
                                 local oldCFrame = hrp.CFrame
-                                hrp.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                                local targetPos = targetHRP.Position
+                                -- Position ourselves 3 studs away from target, looking directly at them
+                                local offset = targetHRP.CFrame.LookVector * 3
+                                local standPos = targetPos + offset
+                                hrp.CFrame = CFrame.lookAt(standPos, targetPos)
                                 task.wait(0.1)
                                 hitPlayerWithShovel(player)
                                 task.wait(0.1)
@@ -1703,7 +1769,7 @@ task.spawn(function()
             
             for _, item in pairs(SeedData) do
                 if typeof(item) == "table" and item.RestockShop then
-                    local isOneTime = item.IsSingleHarvest == true
+                    local isOneTime = (item.IsSingleHarvest == true) or (SingleHarvestSeeds[item.SeedName] == true)
                     local matchOneTimeFilter = (not _G.AutoFarmBetter) or isOneTime
                     
                     if matchOneTimeFilter and isSeedSelectedForBuy(item.SeedName) and (_G.BuyRarity == "All" or item.Rarity == _G.BuyRarity) then
@@ -1820,13 +1886,19 @@ task.spawn(function()
                 
                 -- If owner is present, we must kick them first
                 if ownerPresent and targetOwner then
-                    movePlayer(targetOwner.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3))
-                    task.wait(0.1)
-                    hitPlayerWithShovel(targetOwner)
-                    task.wait(0.5)
-                    -- Re-fetch character/hrp since we moved
-                    char = LocalPlayer.Character
-                    hrp = char and char:FindFirstChild("HumanoidRootPart")
+                    if _G.StealAndKickOwner then
+                        local ownerHRP = targetOwner.Character.HumanoidRootPart
+                        local targetPos = ownerHRP.Position
+                        local offset = ownerHRP.CFrame.LookVector * 3
+                        local standPos = targetPos + offset
+                        movePlayer(CFrame.lookAt(standPos, targetPos))
+                        task.wait(0.1)
+                        hitPlayerWithShovel(targetOwner)
+                        task.wait(0.5)
+                        -- Re-fetch character/hrp since we moved
+                        char = LocalPlayer.Character
+                        hrp = char and char:FindFirstChild("HumanoidRootPart")
+                    end
                 else
                     -- Collect prompts on this plot
                     local plantsFolder = otherPlot:FindFirstChild("Plants")
